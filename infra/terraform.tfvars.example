@@ -1,0 +1,5 @@
+cloudflare_api_token  = "your-cloudflare-api-token"
+cloudflare_account_id = "your-cloudflare-account-id"
+project_name          = "sodigames"
+production_branch     = "master"
+# custom_domain       = "games.example.com"

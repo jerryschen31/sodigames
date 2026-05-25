@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Zombie Tap Shooter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #0a0a12;
+    color: #e8e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  #game-wrap {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    /* dvh excludes mobile browser chrome; svh is the smallest stable height. */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #05050a 80%);
+    cursor: crosshair;
+    /* Disable all browser gestures (scroll, pinch-zoom, double-tap zoom) inside the canvas
+       so every pointerdown is delivered to the game without delay. */
+    touch-action: none;
+  }
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    font-size: 16px;
+  }
+  #hud .group { display: flex; gap: 16px; align-items: center; }
+  .stat { background: rgba(0,0,0,0.4); padding: 6px 10px; border-radius: 8px; }
+  .stat .label { opacity: 0.7; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 18px; font-weight: 700; }
+  #hearts { font-size: 22px; letter-spacing: 4px; }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 10, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    text-align: center;
+    padding: 24px;
+    backdrop-filter: blur(4px);
+  }
+  #overlay.hidden { display: none; }
+  #overlay h1 {
+    font-size: clamp(32px, 8vw, 64px);
+    color: #ff4757;
+    text-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
+    letter-spacing: 2px;
+  }
+  #overlay .subtitle {
+    font-size: 18px;
+    opacity: 0.85;
+    max-width: 480px;
+    line-height: 1.5;
+  }
+  #overlay .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    box-shadow: 0 0 8px currentColor;
+  }
+  button {
+    background: linear-gradient(180deg, #ff4757, #c0392b);
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255, 71, 87, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255, 71, 87, 0.6); }
+  button:active { transform: translateY(0); }
+  .final-score { font-size: 22px; }
+  .final-score .high { color: #ffd93d; }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div class="group">
+      <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+      <div class="stat"><div class="label">High</div><div class="value" id="high">0</div></div>
+    </div>
+    <div class="group">
+      <div class="stat"><div class="label">Lives</div><div class="value" id="hearts">♥♥♥♥</div></div>
+    </div>
+  </div>
+  <div id="overlay">
+    <h1 id="overlay-title">Zombie Tap Shooter</h1>
+    <div class="subtitle" id="overlay-sub">
+      Tap or click to blast incoming enemies. Big ones take multiple hits. Don't shoot the green civilians —
+      let them reach your base for a bonus life! If an enemy reaches you, you take a hit. 4 hits and it's game over.
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="swatch" style="background:#ff4757;color:#ff4757"></div>Grunt (1 hit, +10)</div>
+      <div class="legend-item"><div class="swatch" style="background:#8e44ad;color:#8e44ad"></div>Brute (3 hits, +30)</div>
+      <div class="legend-item"><div class="swatch" style="background:#f39c12;color:#f39c12"></div>Tank (5 hits, +50)</div>
+      <div class="legend-item"><div class="swatch" style="background:#2ecc71;color:#2ecc71"></div>Civilian (–25 if shot, +1 life if rescued)</div>
+    </div>
+    <div class="final-score" id="final-score"></div>
+    <button id="start-btn">Start Game</button>
+  </div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const highEl = document.getElementById('high');
+  const heartsEl = document.getElementById('hearts');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlaySub = document.getElementById('overlay-sub');
+  const finalScoreEl = document.getElementById('final-score');
+  const startBtn = document.getElementById('start-btn');
+
+  const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  // On touch devices, enemies render ~15% smaller and tap forgiveness is added.
+  const SIZE_SCALE = IS_TOUCH ? 0.85 : 1.0;
+  const TAP_PAD = IS_TOUCH ? 20 : 0;
+  const MAX_LIVES = 4;
+  // Lift the player away from the bottom edge on touch devices so iOS home-indicator
+  // and Safari URL-bar gesture zones don't intercept taps near the base.
+  const PLAYER_BOTTOM_OFFSET = IS_TOUCH ? 80 : 30;
+
+  let W = 0, H = 0, DPR = 1, IS_PORTRAIT = false;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = canvas.clientWidth = window.innerWidth;
+    H = canvas.clientHeight = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    IS_PORTRAIT = H > W;
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
+  resize();
+
+  const HIGH_KEY = 'zombie_tap_shooter_high';
+  let highScore = parseInt(localStorage.getItem(HIGH_KEY) || '0', 10);
+  highEl.textContent = highScore;
+
+  const ENEMY_TYPES = {
+    grunt:    { color: '#ff4757', baseRadius: 22, hp: 1, score: 10, speed: 1.0, weight: 60 },
+    brute:    { color: '#8e44ad', baseRadius: 34, hp: 3, score: 30, speed: 0.7, weight: 20 },
+    tank:     { color: '#f39c12', baseRadius: 46, hp: 5, score: 50, speed: 0.5, weight: 10 },
+    civilian: { color: '#2ecc71', baseRadius: 22, hp: 1, score: -25, speed: 1.1, weight: 10, friendly: true },
+  };
+
+  let state;
+  function newState() {
+    return {
+      running: false,
+      score: 0,
+      lives: MAX_LIVES,
+      enemies: [],
+      particles: [],
+      floaters: [],
+      lastSpawn: 0,
+      spawnInterval: 900,
+      startTime: 0,
+      lastFrame: 0,
+    };
+  }
+
+  function pickType() {
+    const total = Object.values(ENEMY_TYPES).reduce((s, t) => s + t.weight, 0);
+    let r = Math.random() * total;
+    for (const [name, t] of Object.entries(ENEMY_TYPES)) {
+      if ((r -= t.weight) <= 0) return { name, ...t };
+    }
+    return { name: 'grunt', ...ENEMY_TYPES.grunt };
+  }
+
+  function spawnEnemy() {
+    const type = pickType();
+    // Spawn from random edge, moving toward player position (bottom center).
+    const targetX = W / 2;
+    const targetY = H + 40;
+    // Portrait (especially mobile) gets very narrow viewport — bias spawns to the top
+    // so the player can see things coming. Landscape/desktop keeps the side variety.
+    const topBias = IS_PORTRAIT ? 0.85 : 0.45;
+    let x, y;
+    const r = Math.random();
+    if (r < topBias) {
+      // top edge — spread across full width
+      x = Math.random() * W;
+      y = -40;
+    } else if (r < topBias + (1 - topBias) / 2) {
+      // left side
+      x = -40;
+      y = Math.random() * H * 0.5;
+    } else {
+      // right side
+      x = W + 40;
+      y = Math.random() * H * 0.5;
+    }
+
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const dist = Math.hypot(dx, dy);
+    // Per-frame speed scaled later by dt; this is px/sec base.
+    const speedPxSec = type.speed * (60 + Math.random() * 30);
+
+    const radius = type.baseRadius * SIZE_SCALE;
+    state.enemies.push({
+      x, y,
+      vx: (dx / dist) * speedPxSec,
+      vy: (dy / dist) * speedPxSec,
+      radius,
+      maxRadius: radius,
+      hp: type.hp,
+      maxHp: type.hp,
+      color: type.color,
+      score: type.score,
+      friendly: !!type.friendly,
+      name: type.name,
+      hitFlash: 0,
+      spawnedAt: performance.now(),
+    });
+  }
+
+  function addParticles(x, y, color, count = 14) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 180;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5 + Math.random() * 0.4,
+        age: 0,
+        color,
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  function addFloater(x, y, text, color) {
+    state.floaters.push({ x, y, text, color, age: 0, life: 0.9 });
+  }
+
+  function handleTap(x, y) {
+    if (!state.running) return;
+    // Find the closest enemy whose hit zone contains the tap.
+    // On touch devices we add TAP_PAD padding for forgiveness.
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < state.enemies.length; i++) {
+      const e = state.enemies[i];
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d <= e.radius + TAP_PAD && d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) {
+      const e = state.enemies[bestIdx];
+      e.hp -= 1;
+      e.hitFlash = 0.15;
+      addParticles(x, y, e.color, e.friendly ? 18 : 8);
+      if (e.hp <= 0) {
+        state.score += e.score;
+        addFloater(e.x, e.y, (e.score >= 0 ? '+' : '') + e.score, e.score >= 0 ? '#ffd93d' : '#ff4757');
+        addParticles(e.x, e.y, e.color, 22);
+        state.enemies.splice(bestIdx, 1);
+      }
+      scoreEl.textContent = state.score;
+    }
+  }
+
+  // Use Pointer Events so mouse, touch, and pen all flow through the same path.
+  // Each finger fires its own pointerdown — multi-touch rapid taps "just work".
+  function onPointerDown(ev) {
+    if (ev.cancelable) ev.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    handleTap(ev.clientX - rect.left, ev.clientY - rect.top);
+  }
+  canvas.addEventListener('pointerdown', onPointerDown);
+  // Belt-and-suspenders: if a stray touch event slips through (older browsers),
+  // route it to handleTap immediately for every touch point.
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.cancelable) e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    for (const t of e.changedTouches) {
+      handleTap(t.clientX - rect.left, t.clientY - rect.top);
+    }
+  }, { passive: false });
+
+  function renderHearts() {
+    const filled = Math.max(0, state.lives);
+    const empty = Math.max(0, MAX_LIVES - filled);
+    heartsEl.textContent = '♥'.repeat(filled) + '♡'.repeat(empty);
+  }
+
+  function loseLife() {
+    state.lives -= 1;
+    renderHearts();
+    flashAlpha = 0.6;
+    if (state.lives <= 0) gameOver();
+  }
+
+  function gainLife() {
+    if (state.lives >= MAX_LIVES) return;
+    state.lives += 1;
+    renderHearts();
+    addFloater(W / 2, H - PLAYER_BOTTOM_OFFSET - 30, '+1 LIFE', '#2ecc71');
+  }
+
+  let flashAlpha = 0;
+
+  function gameOver() {
+    state.running = false;
+    if (state.score > highScore) {
+      highScore = state.score;
+      localStorage.setItem(HIGH_KEY, String(highScore));
+      highEl.textContent = highScore;
+    }
+    overlayTitle.textContent = 'Game Over';
+    overlaySub.textContent = 'They got you. Try again?';
+    finalScoreEl.innerHTML = `Final score: <strong>${state.score}</strong><br><span class="high">High score: ${highScore}</span>`;
+    startBtn.textContent = 'Play Again';
+    overlay.classList.remove('hidden');
+  }
+
+  function startGame() {
+    state = newState();
+    state.running = true;
+    state.lastFrame = performance.now();
+    state.startTime = performance.now();
+    scoreEl.textContent = '0';
+    renderHearts();
+    overlay.classList.add('hidden');
+  }
+
+  startBtn.addEventListener('click', startGame);
+
+  function update(dt) {
+    if (!state.running) return;
+
+    // Difficulty ramps over time: spawn interval shrinks.
+    const elapsed = (performance.now() - state.startTime) / 1000;
+    state.spawnInterval = Math.max(280, 900 - elapsed * 12);
+
+    state.lastSpawn += dt * 1000;
+    if (state.lastSpawn >= state.spawnInterval) {
+      state.lastSpawn = 0;
+      spawnEnemy();
+      // Occasional double spawn at higher difficulty
+      if (elapsed > 20 && Math.random() < 0.25) spawnEnemy();
+    }
+
+    // Player "hit zone" — bottom center area.
+    const playerX = W / 2;
+    const playerY = H - PLAYER_BOTTOM_OFFSET;
+    const playerRadius = 36;
+
+    for (let i = state.enemies.length - 1; i >= 0; i--) {
+      const e = state.enemies[i];
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      if (e.hitFlash > 0) e.hitFlash -= dt;
+
+      // Hit player?
+      const d = Math.hypot(e.x - playerX, e.y - playerY);
+      if (d < e.radius + playerRadius || e.y > H + e.radius) {
+        if (e.friendly) {
+          gainLife();
+          addParticles(playerX, playerY, '#2ecc71', 24);
+        } else {
+          loseLife();
+          addParticles(playerX, playerY, '#ff4757', 30);
+        }
+        state.enemies.splice(i, 1);
+      }
+    }
+
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.age += dt;
+      if (p.age >= p.life) { state.particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+    }
+
+    for (let i = state.floaters.length - 1; i >= 0; i--) {
+      const f = state.floaters[i];
+      f.age += dt;
+      f.y -= 40 * dt;
+      if (f.age >= f.life) state.floaters.splice(i, 1);
+    }
+
+    if (flashAlpha > 0) flashAlpha = Math.max(0, flashAlpha - dt * 1.5);
+  }
+
+  function drawPlayer() {
+    const x = W / 2, y = H - PLAYER_BOTTOM_OFFSET;
+    // Pulse glow
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+    const grd = ctx.createRadialGradient(x, y, 6, x, y, 80);
+    grd.addColorStop(0, `rgba(100, 200, 255, ${0.5 + pulse * 0.3})`);
+    grd.addColorStop(1, 'rgba(100, 200, 255, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x, y, 80, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#6cc1ff';
+    ctx.beginPath();
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function drawEnemy(e) {
+    const flashing = e.hitFlash > 0;
+
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor = e.color;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = flashing ? '#ffffff' : e.color;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Inner detail
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.arc(e.x - e.radius * 0.25, e.y - e.radius * 0.25, e.radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // HP indicator for multi-hit enemies
+    if (e.maxHp > 1) {
+      const barW = e.radius * 1.6;
+      const barH = 5;
+      const bx = e.x - barW / 2;
+      const by = e.y - e.radius - 12;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(bx, by, barW, barH);
+      ctx.fillStyle = e.color;
+      ctx.fillRect(bx, by, barW * (e.hp / e.maxHp), barH);
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, barW, barH);
+    }
+
+    // Friendly marker
+    if (e.friendly) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('+', e.x, e.y);
+    }
+  }
+
+  function drawParticle(p) {
+    const t = 1 - p.age / p.life;
+    ctx.globalAlpha = t;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * t, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFloater(f) {
+    const t = 1 - f.age / f.life;
+    ctx.globalAlpha = t;
+    ctx.fillStyle = f.color;
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Subtle grid / vignette already from CSS background.
+    drawPlayer();
+
+    for (const e of state.enemies) drawEnemy(e);
+    for (const p of state.particles) drawParticle(p);
+    for (const f of state.floaters) drawFloater(f);
+
+    if (flashAlpha > 0) {
+      ctx.fillStyle = `rgba(255, 71, 87, ${flashAlpha})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.05, (now - (state?.lastFrame || now)) / 1000);
+    if (state) state.lastFrame = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  state = newState();
+  // Render once before start so canvas isn't blank under overlay.
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

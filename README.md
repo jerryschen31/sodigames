@@ -1,2 +1,2 @@
 # sodigames
-SoDi : Games for Kids
+SoDi - Games for Kids

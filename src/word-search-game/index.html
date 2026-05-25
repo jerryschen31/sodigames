@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Word Search Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: 'Nunito', 'Comic Sans MS', sans-serif;
+    color: #2c3e50;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  body {
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255, 200, 220, 0.55), transparent 45%),
+      radial-gradient(circle at 85% 15%, rgba(180, 220, 255, 0.55), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(255, 235, 180, 0.55), transparent 50%),
+      linear-gradient(180deg, #b8e0f5 0%, #fce4f0 60%, #fff4cc 100%);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow-x: hidden;
+  }
+
+  /* Floating decorative shapes */
+  .bg-shapes {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .bg-shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.35;
+    filter: blur(1px);
+    animation: floaty 14s ease-in-out infinite;
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-20px) rotate(15deg); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1100px;
+    padding: 14px 14px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  header h1 {
+    font-size: clamp(28px, 6vw, 48px);
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(135deg, #ff6b9d, #c780fa 40%, #4ecdc4 80%, #ffd93d);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 3px 0 rgba(255,255,255,0.4);
+    letter-spacing: 0.5px;
+    padding: 6px 0;
+  }
+
+  /* Pill toggle */
+  .pill {
+    display: inline-flex;
+    background: white;
+    border: 3px solid #ffd93d;
+    border-radius: 999px;
+    padding: 4px;
+    gap: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .pill button {
+    border: none;
+    background: transparent;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: clamp(14px, 2.5vw, 18px);
+    font-weight: 700;
+    color: #7f6d4f;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pill button.active {
+    background: linear-gradient(180deg, #ffd93d, #ff9f43);
+    color: #4d3a00;
+    box-shadow: 0 2px 6px rgba(255,159,67,0.4);
+  }
+  .pill button:not(.active):hover { background: #fff8e1; }
+
+  /* Big primary button */
+  .big-btn {
+    border: none;
+    background: linear-gradient(180deg, #ff6b9d, #c780fa);
+    color: white;
+    font-family: inherit;
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 800;
+    padding: 14px 40px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(199, 128, 250, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.1s, box-shadow 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .big-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(199, 128, 250, 0.6); }
+  .big-btn:active { transform: translateY(0); }
+
+  .hidden { display: none !important; }
+
+  /* Setup screen */
+  #setup-screen, #congrats-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 28px 24px;
+    background: rgba(255,255,255,0.65);
+    border-radius: 28px;
+    border: 3px solid white;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    backdrop-filter: blur(6px);
+    margin-top: 20px;
+  }
+
+  /* Game screen */
+  #game-screen {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .theme-title {
+    font-size: clamp(18px, 3.5vw, 26px);
+    font-weight: 800;
+    color: #2c3e50;
+    background: white;
+    padding: 6px 20px;
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  }
+  .game-area {
+    width: 100%;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .grid-container {
+    position: relative;
+    width: min(92vmin, 600px);
+    max-width: 100%;
+    aspect-ratio: 1;
+    background: white;
+    border-radius: 20px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    touch-action: none;
+  }
+  .grid {
+    position: absolute;
+    inset: 10px;
+    display: grid;
+    gap: 2px;
+  }
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fffbe8;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: clamp(10px, calc(60vmin / var(--n)), 28px);
+    color: #5d4037;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s;
+    touch-action: manipulation;
+  }
+  .cell:hover { background: #fff3c4; }
+  .cell.selected {
+    background: #ffd93d;
+    color: #4d3a00;
+    box-shadow: 0 0 0 3px #ff9f43 inset;
+    transform: scale(0.96);
+  }
+  .cell.selected::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 3px solid #ff9f43;
+    pointer-events: none;
+    animation: selpop 0.2s ease-out;
+  }
+  @keyframes selpop {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 10px;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .found-line {
+    fill: none;
+    stroke-linecap: round;
+    pathLength: 100;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: drawline 0.6s ease-out forwards;
+    opacity: 0.7;
+  }
+  @keyframes drawline {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Words list */
+  .words-box {
+    background: white;
+    border-radius: 20px;
+    padding: 16px 20px;
+    min-width: 180px;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    border: 3px solid #4ecdc4;
+  }
+  .words-box h3 {
+    font-size: 18px;
+    color: #00897b;
+    margin-bottom: 12px;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 2px dashed #b2dfdb;
+  }
+  .words-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .words-list li {
+    font-size: clamp(14px, 2.2vw, 18px);
+    font-weight: 700;
+    color: #34495e;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.3s;
+  }
+  .words-list li.found {
+    color: #95a5a6;
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+    text-decoration-color: #ff6b9d;
+    background: #f8f9fa;
+  }
+
+  /* Congratulations */
+  #congrats-screen h2 {
+    font-size: clamp(28px, 6vw, 48px);
+    background: linear-gradient(135deg, #ff6b9d, #ffd93d 50%, #4ecdc4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 900;
+  }
+  #congrats-screen p {
+    font-size: clamp(16px, 3vw, 20px);
+    color: #2c3e50;
+    font-weight: 600;
+  }
+
+  .confetti {
+    position: fixed;
+    pointer-events: none;
+    width: 10px; height: 14px;
+    z-index: 5;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Responsive: stack words below grid on narrower screens */
+  @media (max-width: 700px) {
+    .game-area { flex-direction: column; align-items: center; }
+    .words-box { width: min(92vmin, 600px); max-width: 100%; }
+    .words-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .words-list li { background: #f8f9fa; }
+  }
+
+  @media (orientation: landscape) and (max-height: 600px) {
+    header h1 { font-size: 22px; padding: 2px 0; }
+    .container { gap: 8px; padding-top: 6px; }
+    .theme-title { font-size: 16px; padding: 4px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-shapes" id="bg-shapes"></div>
+
+<div class="container">
+  <header><h1>Word Search Game</h1></header>
+
+  <div id="setup-screen">
+    <div class="pill" data-pill="main">
+      <button data-diff="easy" class="active">Easy</button>
+      <button data-diff="medium">Medium</button>
+      <button data-diff="hard">Hard</button>
+    </div>
+    <button id="start-btn" class="big-btn">Start Game</button>
+  </div>
+
+  <div id="game-screen" class="hidden">
+    <div class="theme-title" id="theme-title"></div>
+    <div class="game-area">
+      <div class="grid-container" id="grid-container">
+        <div class="grid" id="grid"></div>
+        <svg class="overlay" id="overlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="words-box">
+        <h3>Find these words</h3>
+        <ul class="words-list" id="words-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="congrats-screen" class="hidden">
+    <h2>Congratulations! 🎉</h2>
+    <p>You found all the words!</p>
+    <div class="pill" data-pill="congrats">
+      <button data-diff="easy">Easy</button>
+      <button data-diff="medium">Medium</button>
+      <button data-diff="hard">Hard</button>
+    </div>
+    <button id="new-game-btn" class="big-btn">New Game</button>
+  </div>
+</div>
+
+<script>
+const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V","L","P","Y"],["E","J","G","I","I","G","B","W"],["R","E","F","P","T","O","Z","T"],["I","F","B","M","C","D","V","M"],["O","K","O","E","C","O","H","K"],["W","C","H","X","T","S","W","E"],["L","U","J","A","W","D","T","E"],["L","D","C","K","W","V","G","T"]],"words":["BEE","CAT","COW","DOG","DUCK","FOX","OWL","PIG"],"placements":[{"word":"DUCK","cells":[[7,1],[6,1],[5,1],[4,1]]},{"word":"CAT","cells":[[7,2],[6,3],[5,4]]},{"word":"DOG","cells":[[3,5],[2,5],[1,5]]},{"word":"PIG","cells":[[2,3],[1,3],[0,3]]},{"word":"COW","cells":[[3,4],[4,5],[5,6]]},{"word":"OWL","cells":[[4,0],[5,0],[6,0]]},{"word":"BEE","cells":[[3,2],[2,1],[1,0]]},{"word":"FOX","cells":[[3,1],[4,2],[5,3]]}]},{"theme":"Colors","size":8,"grid":[["C","Y","K","K","P","E","S","A"],["N","E","E","R","G","M","V","X"],["T","U","B","G","C","B","P","P"],["A","T","O","L","R","R","I","Q"],["P","L","C","O","U","N","R","R"],["D","I","W","U","M","E","V","E"],["D","N","N","O","J","L","V","D"],["C","A","J","K","A","X","G","R"]],"words":["BLUE","BROWN","GOLD","GREEN","PINK","RED"],"placements":[{"word":"GREEN","cells":[[1,4],[1,3],[1,2],[1,1],[1,0]]},{"word":"BROWN","cells":[[2,5],[3,4],[4,3],[5,2],[6,1]]},{"word":"BLUE","cells":[[2,2],[3,3],[4,4],[5,5]]},{"word":"PINK","cells":[[4,0],[5,1],[6,2],[7,3]]},{"word":"GOLD","cells":[[2,3],[3,2],[4,1],[5,0]]},{"word":"RED","cells":[[4,7],[5,7],[6,7]]}]},{"theme":"Food","size":8,"grid":[["Y","O","G","O","V","X","V","G"],["E","Y","A","G","U","X","W","C"],["K","K","E","I","E","B","V","L"],["A","G","A","Z","Z","I","P","V"],["C","H","X","P","U","O","S","N"],["G","Q","M","B","R","E","A","D"],["O","B","R","I","C","E","L","U"],["A","W","Y","K","K","L","I","M"]],"words":["BREAD","CAKE","EGG","MILK","PIZZA","RICE","SOUP"],"placements":[{"word":"PIZZA","cells":[[3,6],[3,5],[3,4],[3,3],[3,2]]},{"word":"BREAD","cells":[[5,3],[5,4],[5,5],[5,6],[5,7]]},{"word":"CAKE","cells":[[4,0],[3,0],[2,0],[1,0]]},{"word":"MILK","cells":[[7,7],[7,6],[7,5],[7,4]]},{"word":"RICE","cells":[[6,2],[6,3],[6,4],[6,5]]},{"word":"SOUP","cells":[[4,6],[4,5],[4,4],[4,3]]},{"word":"EGG","cells":[[2,4],[1,3],[0,2]]}]},{"theme":"Fruits","size":8,"grid":[["I","L","I","M","E","O","U","N"],["M","X","D","G","R","J","J","O"],["J","U","W","R","R","P","Z","M"],["E","D","L","H","A","A","T","E"],["R","A","P","P","L","E","P","L"],["J","M","K","T","E","V","P","E"],["E","L","Z","Z","V","G","U","D"],["I","W","I","K","D","B","Y","A"]],"words":["APPLE","GRAPE","KIWI","LEMON","LIME","PEAR","PLUM"],"placements":[{"word":"APPLE","cells":[[4,1],[4,2],[4,3],[4,4],[4,5]]},{"word":"GRAPE","cells":[[1,3],[2,4],[3,5],[4,6],[5,7]]},{"word":"LEMON","cells":[[4,7],[3,7],[2,7],[1,7],[0,7]]},{"word":"PEAR","cells":[[5,6],[4,5],[3,4],[2,3]]},{"word":"KIWI","cells":[[7,3],[7,2],[7,1],[7,0]]},{"word":"LIME","cells":[[0,1],[0,2],[0,3],[0,4]]},{"word":"PLUM","cells":[[4,3],[3,2],[2,1],[1,0]]}]},{"theme":"Toys","size":8,"grid":[["O","P","E","N","Y","A","B","P"],["F","K","G","P","T","R","I","O"],["X","E","L","R","R","O","K","L"],["V","T","A","C","A","B","E","C"],["O","I","V","E","C","O","D","S"],["N","K","H","V","P","T","O","B"],["P","S","X","K","M","B","L","A"],["L","L","A","B","Y","J","L","G"]],"words":["BALL","BIKE","CAR","DOLL","KITE","ROBOT","TRAIN"],"placements":[{"word":"TRAIN","cells":[[1,4],[2,3],[3,2],[4,1],[5,0]]},{"word":"ROBOT","cells":[[1,5],[2,5],[3,5],[4,5],[5,5]]},{"word":"DOLL","cells":[[4,6],[5,6],[6,6],[7,6]]},{"word":"KITE","cells":[[5,1],[4,1],[3,1],[2,1]]},{"word":"BIKE","cells":[[0,6],[1,6],[2,6],[3,6]]},{"word":"BALL","cells":[[7,3],[7,2],[7,1],[7,0]]},{"word":"CAR","cells":[[4,4],[3,4],[2,4]]}]},{"theme":"Nature","size":8,"grid":[["Q","E","X","O","K","C","O","R"],["Z","H","T","A","N","I","A","R"],["A","K","S","O","C","F","M","J"],["M","Z","S","A","K","K","S","Y"],["L","E","A","F","N","N","X","L"],["K","X","U","O","O","D","S","D"],["E","D","O","W","E","E","R","T"],["N","M","X","L","A","X","G","H"]],"words":["LEAF","MOON","RAIN","ROCK","SAND","SNOW","TREE"],"placements":[{"word":"TREE","cells":[[6,7],[6,6],[6,5],[6,4]]},{"word":"LEAF","cells":[[4,0],[4,1],[4,2],[4,3]]},{"word":"ROCK","cells":[[0,7],[0,6],[0,5],[0,4]]},{"word":"SAND","cells":[[2,2],[3,3],[4,4],[5,5]]},{"word":"RAIN","cells":[[1,7],[1,6],[1,5],[1,4]]},{"word":"SNOW","cells":[[3,6],[4,5],[5,4],[6,3]]},{"word":"MOON","cells":[[7,1],[6,2],[5,3],[4,4]]}]},{"theme":"Bugs","size":8,"grid":[["T","Q","X","U","M","M","Y","Q"],["O","N","G","K","T","C","L","X"],["Y","I","A","A","E","L","F","W"],["B","R","N","O","E","V","N","Z"],["U","H","P","S","A","W","P","R"],["G","T","D","I","Z","E","X","I"],["Q","O","B","Z","E","E","U","H"],["Y","M","G","E","M","B","C","L"]],"words":["ANT","BEE","BUG","FLEA","FLY","MOTH","WASP"],"placements":[{"word":"WASP","cells":[[4,5],[4,4],[4,3],[4,2]]},{"word":"MOTH","cells":[[7,1],[6,1],[5,1],[4,1]]},{"word":"FLEA","cells":[[2,6],[2,5],[2,4],[2,3]]},{"word":"BEE","cells":[[7,5],[6,5],[5,5]]},{"word":"ANT","cells":[[2,2],[1,1],[0,0]]},{"word":"BUG","cells":[[3,0],[4,0],[5,0]]},{"word":"FLY","cells":[[2,6],[1,6],[0,6]]}]},{"theme":"Sea","size":8,"grid":[["A","I","H","S","E","A","L","T"],["F","P","H","S","I","F","Q","S"],["X","Q","E","V","A","W","H","R"],["D","I","H","W","L","P","Z","S"],["K","Z","G","U","R","T","N","N"],["Q","B","A","R","C","Q","H","Q"],["X","V","U","D","R","E","E","F"],["S","H","E","L","L","Q","G","L"]],"words":["CRAB","FISH","REEF","SEAL","SHELL","WAVE"],"placements":[{"word":"SHELL","cells":[[7,0],[7,1],[7,2],[7,3],[7,4]]},{"word":"FISH","cells":[[1,5],[1,4],[1,3],[1,2]]},{"word":"CRAB","cells":[[5,4],[5,3],[5,2],[5,1]]},{"word":"SEAL","cells":[[0,3],[0,4],[0,5],[0,6]]},{"word":"REEF","cells":[[6,4],[6,5],[6,6],[6,7]]},{"word":"WAVE","cells":[[2,5],[2,4],[2,3],[2,2]]}]},{"theme":"Music","size":8,"grid":[["N","H","F","H","C","M","D","P"],["N","O","T","E","T","U","R","K"],["S","X","O","A","H","R","G","V"],["O","H","E","N","K","D","U","J"],["N","B","C","V","A","S","V","N"],["G","X","H","A","M","I","Y","F"],["Z","B","A","N","D","N","P","J"],["E","M","B","E","P","G","R","J"]],"words":["BAND","BEAT","DRUM","NOTE","PIANO","SING","SONG"],"placements":[{"word":"PIANO","cells":[[6,6],[5,5],[4,4],[3,3],[2,2]]},{"word":"SING","cells":[[4,5],[5,5],[6,5],[7,5]]},{"word":"BAND","cells":[[6,1],[6,2],[6,3],[6,4]]},{"word":"DRUM","cells":[[3,5],[2,5],[1,5],[0,5]]},{"word":"NOTE","cells":[[1,0],[1,1],[1,2],[1,3]]},{"word":"BEAT","cells":[[4,1],[3,2],[2,3],[1,4]]},{"word":"SONG","cells":[[2,0],[3,0],[4,0],[5,0]]}]},{"theme":"Body","size":8,"grid":[["H","Q","H","P","A","R","Q","B"],["J","A","E","T","O","O","F","R"],["M","R","A","J","V","H","R","S"],["E","Y","D","J","O","R","X","Q"],["A","Q","L","B","I","Y","H","W"],["R","E","Y","A","H","E","E","U"],["G","J","H","H","A","N","D","A"],["E","X","E","Y","E","C","J","I"]],"words":["ARM","EAR","EYE","FOOT","HAIR","HAND","HEAD","LEG"],"placements":[{"word":"HAND","cells":[[6,3],[6,4],[6,5],[6,6]]},{"word":"FOOT","cells":[[1,6],[1,5],[1,4],[1,3]]},{"word":"HEAD","cells":[[0,2],[1,2],[2,2],[3,2]]},{"word":"HAIR","cells":[[6,2],[5,3],[4,4],[3,5]]},{"word":"ARM","cells":[[2,2],[2,1],[2,0]]},{"word":"LEG","cells":[[4,2],[5,1],[6,0]]},{"word":"EYE","cells":[[7,2],[7,3],[7,4]]},{"word":"EAR","cells":[[3,0],[4,0],[5,0]]}]},{"theme":"Tools","size":8,"grid":[["R","E","L","U","R","X","N","A"],["B","C","X","W","P","V","V","B"],["V","D","H","M","D","F","N","U"],["D","N","N","W","N","F","N","Q"],["K","T","A","S","P","O","E","M"],["B","S","L","I","M","R","X","H"],["F","I","U","O","L","K","Z","I"],["V","H","B","Q","B","Z","C","O"]],"words":["BOLT","FORK","NAIL","RULER","SAW"],"placements":[{"word":"RULER","cells":[[0,4],[0,3],[0,2],[0,1],[0,0]]},{"word":"NAIL","cells":[[3,1],[4,2],[5,3],[6,4]]},{"word":"BOLT","cells":[[7,4],[6,3],[5,2],[4,1]]},{"word":"FORK","cells":[[3,5],[4,5],[5,5],[6,5]]},{"word":"SAW","cells":[[5,1],[4,2],[3,3]]}]},{"theme":"Weather","size":8,"grid":[["L","M","H","W","D","F","U","J"],["J","T","G","B","V","S","Z","G"],["E","C","I","C","H","L","H","S"],["S","D","M","Q","L","Q","G","S"],["R","N","N","F","Y","O","F","N"],["S","A","O","I","F","L","U","N"],["U","M","I","W","W","W","Q","D"],["N","J","O","N","S","R","Q","Y"]],"words":["CLOUD","FOG","ICE","RAIN","SNOW","SUN","WIND"],"placements":[{"word":"CLOUD","cells":[[2,3],[3,4],[4,5],[5,6],[6,7]]},{"word":"RAIN","cells":[[4,0],[5,1],[6,2],[7,3]]},{"word":"SNOW","cells":[[3,0],[4,1],[5,2],[6,3]]},{"word":"WIND","cells":[[6,4],[5,3],[4,2],[3,1]]},{"word":"SUN","cells":[[5,0],[6,0],[7,0]]},{"word":"FOG","cells":[[5,4],[4,5],[3,6]]},{"word":"ICE","cells":[[2,2],[2,1],[2,0]]}]},{"theme":"Sports","size":8,"grid":[["J","E","D","F","Q","I","K","L"],["C","E","C","A","R","H","Z","Y"],["G","A","M","E","G","O","A","L"],["A","J","I","H","E","R","K","A"],["X","R","L","B","J","I","U","E"],["W","F","L","X","C","W","Q","N"],["V","P","A","K","J","G","L","S"],["J","V","B","P","M","U","J","Q"]],"words":["BALL","GAME","GOAL","JUMP","KICK","RACE","RUN"],"placements":[{"word":"BALL","cells":[[7,2],[6,2],[5,2],[4,2]]},{"word":"GAME","cells":[[2,0],[2,1],[2,2],[2,3]]},{"word":"GOAL","cells":[[2,4],[2,5],[2,6],[2,7]]},{"word":"KICK","cells":[[3,6],[4,5],[5,4],[6,3]]},{"word":"JUMP","cells":[[7,6],[7,5],[7,4],[7,3]]},{"word":"RACE","cells":[[1,4],[1,3],[1,2],[1,1]]},{"word":"RUN","cells":[[3,5],[4,6],[5,7]]}]},{"theme":"Sky","size":8,"grid":[["E","W","Q","G","I","L","R","S"],["D","U","O","L","C","B","Y","T"],["M","Z","D","O","G","W","L","E"],["D","J","M","O","O","N","B","M"],["N","J","L","S","S","Y","O","O"],["R","U","W","T","K","N","R","C"],["J","T","A","L","U","Y","L","G"],["V","R","X","S","C","D","X","R"]],"words":["CLOUD","COMET","MOON","SKY","STAR","SUN"],"placements":[{"word":"CLOUD","cells":[[1,4],[1,3],[1,2],[1,1],[1,0]]},{"word":"COMET","cells":[[5,7],[4,7],[3,7],[2,7],[1,7]]},{"word":"MOON","cells":[[3,2],[3,3],[3,4],[3,5]]},{"word":"STAR","cells":[[4,4],[5,3],[6,2],[7,1]]},{"word":"SUN","cells":[[7,3],[6,4],[5,5]]},{"word":"SKY","cells":[[4,3],[5,4],[6,5]]}]},{"theme":"Family","size":8,"grid":[["Y","O","D","C","Z","I","M","R"],["F","A","I","O","Q","Q","E","W"],["D","E","L","K","T","N","J","D"],["K","W","S","M","R","M","O","M"],["D","I","A","O","U","H","Y","T"],["G","Y","D","L","N","B","N","M"],["Y","U","A","M","A","U","R","F"],["W","A","U","B","A","T","Z","Y"]],"words":["AUNT","BABY","DAD","KID","MOM","SON"],"placements":[{"word":"AUNT","cells":[[7,4],[6,5],[5,6],[4,7]]},{"word":"BABY","cells":[[7,3],[6,4],[5,5],[4,6]]},{"word":"MOM","cells":[[3,5],[3,6],[3,7]]},{"word":"DAD","cells":[[2,0],[1,1],[0,2]]},{"word":"SON","cells":[[3,2],[4,3],[5,4]]},{"word":"KID","cells":[[3,0],[4,1],[5,2]]}]}],"medium":[{"theme":"Animals","size":12,"grid":[["G","X","V","K","T","S","K","T","R","H","A","L"],["K","T","A","L","E","A","C","C","E","Y","W","U"],["K","X","R","B","J","Z","C","H","G","J","A","M"],["W","K","B","E","P","R","Q","P","I","V","R","C"],["L","R","E","U","A","P","A","G","T","A","M","K"],["D","B","Z","B","M","H","C","P","V","F","Y","H"],["P","K","B","U","S","W","B","G","C","E","O","Y"],["M","I","G","W","L","I","O","N","K","R","B","P"],["T","K","K","D","V","K","L","N","S","P","S","H"],["R","A","E","B","G","E","O","E","N","X","W","K"],["N","H","P","A","U","M","M","O","Z","M","V","E"],["I","P","A","D","N","A","P","O","S","D","W","S"]],"words":["BEAR","HORSE","LION","MONKEY","PANDA","RABBIT","TIGER","ZEBRA"],"placements":[{"word":"RABBIT","cells":[[3,5],[4,4],[5,3],[6,2],[7,1],[8,0]]},{"word":"MONKEY","cells":[[10,5],[9,6],[8,7],[7,8],[6,9],[5,10]]},{"word":"TIGER","cells":[[4,8],[3,8],[2,8],[1,8],[0,8]]},{"word":"PANDA","cells":[[11,6],[11,5],[11,4],[11,3],[11,2]]},{"word":"ZEBRA","cells":[[5,2],[4,2],[3,2],[2,2],[1,2]]},{"word":"HORSE","cells":[[5,11],[6,10],[7,9],[8,8],[9,7]]},{"word":"LION","cells":[[7,4],[7,5],[7,6],[7,7]]},{"word":"BEAR","cells":[[9,3],[9,2],[9,1],[9,0]]}]},{"theme":"Ocean","size":12,"grid":[["G","J","E","L","L","Y","H","W","Q","H","I","R"],["D","E","L","C","Z","T","T","Z","H","C","P","R"],["O","L","Y","Q","B","S","H","V","K","A","R","J"],["C","A","M","D","X","Q","J","X","D","B","L","J"],["T","R","B","U","R","C","Z","M","P","N","H","E"],["O","O","Q","Z","E","E","L","Z","I","L","I","V"],["P","C","G","G","G","B","T","H","J","L","O","K"],["U","Q","K","B","J","J","P","S","R","T","R","N"],["S","J","X","K","I","L","X","L","B","A","P","E"],["R","J","F","K","O","Z","H","I","H","O","X","H"],["U","A","P","D","Z","N","J","S","W","Y","L","N"],["Y","J","W","L","C","O","H","N","Y","L","D","O"]],"words":["CORAL","DOLPHIN","JELLY","LOBSTER","OCTOPUS","SHARK","WHALE"],"placements":[{"word":"DOLPHIN","cells":[[10,3],[9,4],[8,5],[7,6],[6,7],[5,8],[4,9]]},{"word":"OCTOPUS","cells":[[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0]]},{"word":"LOBSTER","cells":[[10,10],[9,9],[8,8],[7,7],[6,6],[5,5],[4,4]]},{"word":"SHARK","cells":[[10,7],[9,8],[8,9],[7,10],[6,11]]},{"word":"WHALE","cells":[[0,7],[1,8],[2,9],[3,10],[4,11]]},{"word":"CORAL","cells":[[6,1],[5,1],[4,1],[3,1],[2,1]]},{"word":"JELLY","cells":[[0,1],[0,2],[0,3],[0,4],[0,5]]}]},{"theme":"Space","size":12,"grid":[["K","U","P","F","M","N","E","B","U","L","A","T"],["H","M","A","L","X","F","H","T","R","A","E","S"],["I","C","N","R","W","C","D","X","X","W","N","E"],["P","L","A","N","E","T","O","C","W","N","W","G"],["T","G","Y","L","D","M","H","M","Y","U","B","I"],["I","E","A","C","Z","V","K","Y","E","R","Q","R"],["X","I","K","L","X","S","C","N","Y","T","K","N"],["G","L","H","C","A","F","X","S","F","W","L","A"],["K","I","K","H","O","X","Y","B","X","L","X","C"],["R","V","R","P","N","R","Y","W","Z","R","E","C"],["I","M","E","T","E","O","R","K","C","I","D","Z"],["N","O","V","T","I","B","R","O","A","J","N","W"]],"words":["COMET","EARTH","GALAXY","METEOR","NEBULA","ORBIT","PLANET","ROCKET"],"placements":[{"word":"PLANET","cells":[[3,0],[3,1],[3,2],[3,3],[3,4],[3,5]]},{"word":"GALAXY","cells":[[4,1],[5,2],[6,3],[7,4],[8,5],[9,6]]},{"word":"ROCKET","cells":[[9,5],[8,4],[7,3],[6,2],[5,1],[4,0]]},{"word":"NEBULA","cells":[[0,5],[0,6],[0,7],[0,8],[0,9],[0,10]]},{"word":"METEOR","cells":[[10,1],[10,2],[10,3],[10,4],[10,5],[10,6]]},{"word":"COMET","cells":[[2,5],[3,6],[4,7],[5,8],[6,9]]},{"word":"ORBIT","cells":[[11,7],[11,6],[11,5],[11,4],[11,3]]},{"word":"EARTH","cells":[[1,10],[1,9],[1,8],[1,7],[1,6]]}]},{"theme":"Food","size":12,"grid":[["X","L","M","K","R","A","P","Q","V","O","A","C"],["G","U","U","V","V","W","N","Z","H","L","H","S"],["T","F","F","T","U","M","D","D","H","L","E","L"],["G","W","F","N","O","O","D","L","E","S","D","F"],["I","P","I","D","Z","J","D","Q","X","W","N","P"],["Q","B","N","H","E","S","J","C","D","H","E","A"],["S","E","L","D","K","T","O","O","N","I","M","S"],["R","S","Y","L","A","H","F","O","G","D","Q","T"],["U","E","L","K","C","C","P","K","S","Z","G","A"],["Q","E","U","R","N","C","Z","I","X","R","P","N"],["I","H","Y","X","A","V","R","E","G","R","U","B"],["B","C","A","R","P","O","T","I","R","R","U","B"]],"words":["BURGER","BURRITO","CHEESE","COOKIE","MUFFIN","NOODLES","PANCAKE","PASTA"],"placements":[{"word":"NOODLES","cells":[[3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9]]},{"word":"BURRITO","cells":[[11,11],[11,10],[11,9],[11,8],[11,7],[11,6],[11,5]]},{"word":"PANCAKE","cells":[[11,4],[10,4],[9,4],[8,4],[7,4],[6,4],[5,4]]},{"word":"BURGER","cells":[[10,11],[10,10],[10,9],[10,8],[10,7],[10,6]]},{"word":"COOKIE","cells":[[5,7],[6,7],[7,7],[8,7],[9,7],[10,7]]},{"word":"MUFFIN","cells":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2]]},{"word":"CHEESE","cells":[[11,1],[10,1],[9,1],[8,1],[7,1],[6,1]]},{"word":"PASTA","cells":[[4,11],[5,11],[6,11],[7,11],[8,11]]}]},{"theme":"Fruits","size":12,"grid":[["L","H","E","P","Z","F","V","N","F","I","H","H"],["S","O","C","Y","P","X","O","L","Y","O","B","S"],["E","M","I","A","Z","M","T","E","N","O","A","R"],["G","N","E","H","E","Y","O","X","L","F","N","J"],["N","W","E","L","R","P","C","B","W","Z","A","C"],["A","E","D","R","O","L","I","H","S","D","N","C"],["R","Z","E","G","A","N","R","G","O","E","A","W"],["O","H","F","H","L","X","P","N","Q","A","B","N"],["C","A","C","C","K","T","A","E","Z","D","L","Y"],["L","M","A","N","G","O","G","U","W","X","J","F"],["C","Z","X","Q","A","M","R","J","X","E","W","B"],["G","Y","M","B","M","E","H","O","U","V","U","N"]],"words":["APRICOT","BANANA","CHERRY","LEMON","MANGO","MELON","ORANGE","PEACH"],"placements":[{"word":"APRICOT","cells":[[8,6],[7,6],[6,6],[5,6],[4,6],[3,6],[2,6]]},{"word":"BANANA","cells":[[1,10],[2,10],[3,10],[4,10],[5,10],[6,10]]},{"word":"ORANGE","cells":[[7,0],[6,0],[5,0],[4,0],[3,0],[2,0]]},{"word":"CHERRY","cells":[[8,0],[7,1],[6,2],[5,3],[4,4],[3,5]]},{"word":"PEACH","cells":[[4,5],[3,4],[2,3],[1,2],[0,1]]},{"word":"MANGO","cells":[[9,1],[9,2],[9,3],[9,4],[9,5]]},{"word":"LEMON","cells":[[4,3],[3,4],[2,5],[1,6],[0,7]]},{"word":"MELON","cells":[[2,1],[3,2],[4,3],[5,4],[6,5]]}]},{"theme":"Vegetables","size":12,"grid":[["P","D","P","P","U","X","Q","A","U","Y","O","W"],["Z","N","Z","E","N","Z","E","J","S","F","W","B"],["R","Z","H","L","M","K","E","N","C","I","R","D"],["N","H","T","O","R","R","A","C","E","I","G","H"],["O","A","O","N","P","H","B","U","L","M","S","S"],["I","J","V","E","O","Q","S","F","E","Q","F","I"],["N","V","T","S","T","T","H","I","R","H","E","D"],["O","X","N","I","A","X","A","I","Y","B","N","A"],["O","S","S","E","T","X","G","K","H","U","I","R"],["A","E","R","Z","O","T","O","M","A","T","O","J"],["Y","D","B","H","P","E","P","P","E","R","B","N"],["A","C","I","L","R","A","G","X","B","G","V","G"]],"words":["CARROT","CELERY","GARLIC","ONION","PEPPER","POTATO","RADISH","TOMATO"],"placements":[{"word":"CARROT","cells":[[3,7],[3,6],[3,5],[3,4],[3,3],[3,2]]},{"word":"POTATO","cells":[[4,4],[5,4],[6,4],[7,4],[8,4],[9,4]]},{"word":"TOMATO","cells":[[9,5],[9,6],[9,7],[9,8],[9,9],[9,10]]},{"word":"CELERY","cells":[[2,8],[3,8],[4,8],[5,8],[6,8],[7,8]]},{"word":"PEPPER","cells":[[10,4],[10,5],[10,6],[10,7],[10,8],[10,9]]},{"word":"GARLIC","cells":[[11,6],[11,5],[11,4],[11,3],[11,2],[11,1]]},{"word":"RADISH","cells":[[8,11],[7,11],[6,11],[5,11],[4,11],[3,11]]},{"word":"ONION","cells":[[7,0],[6,0],[5,0],[4,0],[3,0]]}]},{"theme":"School","size":12,"grid":[["L","H","R","U","L","E","R","M","L","P","A","T"],["Y","S","P","J","C","J","A","K","O","Y","R","A"],["G","X","R","S","O","R","F","J","Y","H","E","S"],["Y","Q","G","H","E","I","A","S","W","G","S","N"],["K","E","N","T","H","P","O","Y","I","K","A","F"],["D","X","I","A","G","Q","E","P","O","U","R","R"],["E","Y","D","M","D","T","L","N","Q","N","E","A"],["E","J","A","W","M","Q","M","P","C","H","V","S"],["H","Y","E","J","D","Z","F","Z","C","I","A","Z"],["Q","T","R","X","E","X","T","A","B","B","L","J"],["E","W","P","I","P","I","E","C","Z","D","K","B"],["N","B","M","U","T","T","S","C","H","O","O","L"]],"words":["CRAYON","ERASER","MATH","PENCIL","READING","RULER","SCHOOL","TEACHER"],"placements":[{"word":"TEACHER","cells":[[11,5],[10,6],[9,7],[8,8],[7,9],[6,10],[5,11]]},{"word":"READING","cells":[[9,2],[8,2],[7,2],[6,2],[5,2],[4,2],[3,2]]},{"word":"PENCIL","cells":[[4,5],[5,6],[6,7],[7,8],[8,9],[9,10]]},{"word":"SCHOOL","cells":[[11,6],[11,7],[11,8],[11,9],[11,10],[11,11]]},{"word":"ERASER","cells":[[6,10],[5,10],[4,10],[3,10],[2,10],[1,10]]},{"word":"CRAYON","cells":[[1,4],[2,5],[3,6],[4,7],[5,8],[6,9]]},{"word":"RULER","cells":[[0,2],[0,3],[0,4],[0,5],[0,6]]},{"word":"MATH","cells":[[6,3],[5,3],[4,3],[3,3]]}]},{"theme":"Sports","size":12,"grid":[["L","W","P","F","C","S","A","Q","B","I","D","Z"],["N","M","K","L","N","X","X","Z","E","B","B","H"],["Z","U","X","G","N","I","T","A","K","S","M","B"],["N","G","N","I","P","M","U","J","W","R","F","Z"],["Q","R","E","C","C","O","S","H","G","T","M","M"],["S","N","Y","G","T","E","N","N","I","S","P","L"],["V","R","U","N","N","I","N","G","T","K","K","U"],["I","H","I","V","S","K","Y","E","K","C","O","H"],["H","O","G","G","M","T","E","L","Y","M","T","S"],["V","H","U","O","O","B","O","X","I","N","G","M"],["L","J","V","U","M","L","T","N","D","N","Y","F"],["B","B","M","T","G","F","F","E","I","M","D","H"]],"words":["BOXING","GOLF","HOCKEY","JUMPING","RUNNING","SKATING","SOCCER","TENNIS"],"placements":[{"word":"RUNNING","cells":[[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7]]},{"word":"JUMPING","cells":[[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1]]},{"word":"SKATING","cells":[[2,9],[2,8],[2,7],[2,6],[2,5],[2,4],[2,3]]},{"word":"SOCCER","cells":[[4,6],[4,5],[4,4],[4,3],[4,2],[4,1]]},{"word":"TENNIS","cells":[[5,4],[5,5],[5,6],[5,7],[5,8],[5,9]]},{"word":"HOCKEY","cells":[[7,11],[7,10],[7,9],[7,8],[7,7],[7,6]]},{"word":"BOXING","cells":[[9,5],[9,6],[9,7],[9,8],[9,9],[9,10]]},{"word":"GOLF","cells":[[8,3],[9,4],[10,5],[11,6]]}]},{"theme":"Music","size":12,"grid":[["J","F","P","K","U","F","U","U","H","F","Y","X"],["E","S","C","H","Y","P","H","T","M","C","O","C"],["T","A","X","S","D","K","G","S","T","T","B","A"],["U","I","R","M","O","O","G","F","R","H","G","K"],["L","G","A","U","L","D","N","U","C","Y","S","P"],["F","D","T","R","E","W","M","A","K","H","R","J"],["G","Q","I","D","M","P","J","R","I","H","D","A"],["V","V","U","O","E","O","B","C","C","P","N","Y"],["Q","L","G","T","P","V","I","O","L","I","N","Z"],["I","U","F","X","P","W","U","P","J","N","V","C"],["H","M","Y","A","G","I","S","I","J","E","T","R"],["U","S","M","R","H","Y","T","H","M","N","R","E"]],"words":["DRUMS","FLUTE","GUITAR","MELODY","PIANO","RHYTHM","TRUMPET","VIOLIN"],"placements":[{"word":"TRUMPET","cells":[[2,9],[3,8],[4,7],[5,6],[6,5],[7,4],[8,3]]},{"word":"GUITAR","cells":[[8,2],[7,2],[6,2],[5,2],[4,2],[3,2]]},{"word":"VIOLIN","cells":[[8,5],[8,6],[8,7],[8,8],[8,9],[8,10]]},{"word":"MELODY","cells":[[6,4],[5,4],[4,4],[3,4],[2,4],[1,4]]},{"word":"RHYTHM","cells":[[11,3],[11,4],[11,5],[11,6],[11,7],[11,8]]},{"word":"PIANO","cells":[[7,9],[6,8],[5,7],[4,6],[3,5]]},{"word":"DRUMS","cells":[[6,3],[5,3],[4,3],[3,3],[2,3]]},{"word":"FLUTE","cells":[[5,0],[4,0],[3,0],[2,0],[1,0]]}]},{"theme":"Weather","size":12,"grid":[["U","N","G","Z","R","F","M","Y","A","A","V","K"],["D","V","P","Q","M","E","H","E","G","W","X","K"],["X","K","S","W","A","Z","D","N","I","G","J","L"],["V","R","Y","W","O","N","S","N","O","L","O","Y"],["C","W","A","U","D","V","D","B","U","E","I","F"],["L","G","D","I","H","Y","U","G","Q","H","F","V"],["O","B","H","J","N","W","A","Y","O","W","T","B"],["U","N","V","A","J","Y","Y","M","R","O","T","S"],["D","P","V","H","X","M","X","R","E","N","G","Y"],["Y","I","K","Y","P","S","Q","V","Q","T","T","X"],["M","H","Q","T","E","Z","R","S","U","N","N","Y"],["O","J","F","Y","X","B","O","X","P","H","D","O"]],"words":["CLOUDY","FOGGY","RAINY","SNOWY","STORMY","SUNNY","THUNDER","WINDY"],"placements":[{"word":"THUNDER","cells":[[6,10],[5,9],[4,8],[3,7],[2,6],[1,5],[0,4]]},{"word":"CLOUDY","cells":[[4,0],[5,0],[6,0],[7,0],[8,0],[9,0]]},{"word":"STORMY","cells":[[7,11],[7,10],[7,9],[7,8],[7,7],[7,6]]},{"word":"SUNNY","cells":[[10,7],[10,8],[10,9],[10,10],[10,11]]},{"word":"RAINY","cells":[[3,1],[4,2],[5,3],[6,4],[7,5]]},{"word":"SNOWY","cells":[[3,6],[3,5],[3,4],[3,3],[3,2]]},{"word":"WINDY","cells":[[1,9],[2,8],[3,7],[4,6],[5,5]]},{"word":"FOGGY","cells":[[4,11],[3,10],[2,9],[1,8],[0,7]]}]},{"theme":"Insects","size":12,"grid":[["L","B","Y","G","J","N","Q","U","V","N","O","K"],["A","X","H","O","R","N","E","T","V","D","U","S"],["L","C","C","T","T","E","K","C","I","R","C","P"],["H","A","Y","L","F","E","R","I","F","D","O","I"],["V","P","D","R","D","A","B","S","Q","M","K","D"],["F","Z","Y","Y","V","F","M","C","R","R","U","E"],["P","N","L","Z","B","N","W","J","T","Q","F","R"],["H","T","O","M","H","U","E","L","T","E","E","B"],["H","H","F","P","C","O","G","H","W","M","N","A"],["C","K","L","Z","A","S","T","M","J","W","W","C"],["J","F","O","J","B","B","V","W","R","U","P","X"],["A","N","X","K","X","L","Y","R","N","R","O","T"]],"words":["BEETLE","CRICKET","FIREFLY","HORNET","LADYBUG","MOTH","SPIDER"],"placements":[{"word":"LADYBUG","cells":[[2,0],[3,1],[4,2],[5,3],[6,4],[7,5],[8,6]]},{"word":"CRICKET","cells":[[2,10],[2,9],[2,8],[2,7],[2,6],[2,5],[2,4]]},{"word":"FIREFLY","cells":[[3,8],[3,7],[3,6],[3,5],[3,4],[3,3],[3,2]]},{"word":"BEETLE","cells":[[7,11],[7,10],[7,9],[7,8],[7,7],[7,6]]},{"word":"SPIDER","cells":[[1,11],[2,11],[3,11],[4,11],[5,11],[6,11]]},{"word":"HORNET","cells":[[1,2],[1,3],[1,4],[1,5],[1,6],[1,7]]},{"word":"MOTH","cells":[[7,3],[7,2],[7,1],[7,0]]}]},{"theme":"Birds","size":12,"grid":[["J","K","B","S","A","I","E","G","I","D","N","Z"],["M","E","V","J","J","J","A","M","E","I","F","Z"],["X","W","O","R","R","A","P","S","U","S","B","E"],["P","U","S","C","W","H","M","G","U","O","L","E"],["G","A","F","P","A","G","N","V","Z","G","P","N"],["Y","X","R","W","V","E","V","S","A","O","O","R"],["N","E","K","R","P","M","C","E","P","C","H","N"],["P","Q","E","Z","O","Z","T","F","L","U","C","I"],["U","M","S","N","F","T","I","A","N","X","N","B"],["S","C","G","Q","I","D","F","D","W","D","I","O"],["W","H","B","Y","Q","O","H","Y","B","I","F","R"],["X","B","X","L","C","Z","E","W","S","L","X","C"]],"words":["EAGLE","FALCON","FINCH","HAWK","PARROT","PENGUIN","ROBIN","SPARROW"],"placements":[{"word":"PENGUIN","cells":[[6,4],[5,5],[4,6],[3,7],[2,8],[1,9],[0,10]]},{"word":"SPARROW","cells":[[2,7],[2,6],[2,5],[2,4],[2,3],[2,2],[2,1]]},{"word":"PARROT","cells":[[3,0],[4,1],[5,2],[6,3],[7,4],[8,5]]},{"word":"FALCON","cells":[[9,6],[8,7],[7,8],[6,9],[5,10],[4,11]]},{"word":"EAGLE","cells":[[6,7],[5,8],[4,9],[3,10],[2,11]]},{"word":"ROBIN","cells":[[10,11],[9,11],[8,11],[7,11],[6,11]]},{"word":"FINCH","cells":[[10,10],[9,10],[8,10],[7,10],[6,10]]},{"word":"HAWK","cells":[[3,5],[4,4],[5,3],[6,2]]}]},{"theme":"Jobs","size":12,"grid":[["R","E","A","T","T","H","W","O","O","A","J","M"],["Q","E","R","R","E","A","R","R","E","K","A","B"],["R","R","T","M","W","A","O","E","F","X","F","P"],["F","C","I","L","N","O","C","D","M","L","X","F"],["H","R","S","A","W","U","N","H","N","R","P","O"],["N","E","T","S","R","D","R","L","E","I","A","Z"],["A","F","Z","L","I","O","G","S","L","R","A","F"],["X","V","X","X","T","C","W","O","E","K","I","I"],["O","J","F","R","E","T","T","D","C","O","Z","T"],["A","F","N","E","R","O","I","U","I","Z","T","X"],["O","W","R","U","H","R","O","G","Y","B","Z","R"],["Z","D","Q","I","B","A","T","E","A","K","P","N"]],"words":["ARTIST","BAKER","DOCTOR","FARMER","NURSE","PILOT","TEACHER","WRITER"],"placements":[{"word":"TEACHER","cells":[[0,3],[1,4],[2,5],[3,6],[4,7],[5,8],[6,9]]},{"word":"DOCTOR","cells":[[5,5],[6,5],[7,5],[8,5],[9,5],[10,5]]},{"word":"ARTIST","cells":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2]]},{"word":"WRITER","cells":[[4,4],[5,4],[6,4],[7,4],[8,4],[9,4]]},{"word":"FARMER","cells":[[6,11],[5,10],[4,9],[3,8],[2,7],[1,6]]},{"word":"BAKER","cells":[[1,11],[1,10],[1,9],[1,8],[1,7]]},{"word":"PILOT","cells":[[4,10],[5,9],[6,8],[7,7],[8,6]]},{"word":"NURSE","cells":[[3,4],[4,5],[5,6],[6,7],[7,8]]}]},{"theme":"Travel","size":12,"grid":[["T","J","B","O","B","D","W","Z","J","H","Z","U"],["O","D","I","E","U","Q","M","M","K","S","D","C"],["D","M","C","P","N","Y","Y","L","G","D","W","D"],["Y","G","Y","R","Y","A","A","A","B","N","T","S"],["R","R","C","T","T","G","L","W","A","T","T","T"],["W","B","L","L","L","Q","A","P","B","T","V","R"],["L","H","E","N","U","D","J","L","R","U","U","U"],["V","S","Y","M","I","E","M","U","T","I","S","C"],["J","V","R","S","Q","A","N","R","K","G","A","K"],["Z","F","E","R","R","Y","R","C","T","A","O","B"],["Y","X","S","C","C","X","E","T","T","R","E","B"],["O","K","R","O","C","K","E","T","M","H","M","I"]],"words":["AIRPLANE","BICYCLE","BOAT","FERRY","ROCKET","SUBWAY","TRAIN","TRUCK"],"placements":[{"word":"AIRPLANE","cells":[[8,10],[7,9],[6,8],[5,7],[4,6],[3,5],[2,4],[1,3]]},{"word":"BICYCLE","cells":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2]]},{"word":"SUBWAY","cells":[[7,10],[6,9],[5,8],[4,7],[3,6],[2,5]]},{"word":"ROCKET","cells":[[11,2],[11,3],[11,4],[11,5],[11,6],[11,7]]},{"word":"TRAIN","cells":[[10,7],[9,6],[8,5],[7,4],[6,3]]},{"word":"FERRY","cells":[[9,1],[9,2],[9,3],[9,4],[9,5]]},{"word":"TRUCK","cells":[[4,11],[5,11],[6,11],[7,11],[8,11]]},{"word":"BOAT","cells":[[9,11],[9,10],[9,9],[9,8]]}]},{"theme":"Garden","size":12,"grid":[["J","V","I","Y","N","E","Z","L","W","A","J","S"],["F","F","Z","M","Z","D","P","Z","P","I","G","W"],["B","K","L","L","X","T","F","P","Y","P","D","C"],["H","Z","W","O","U","H","Y","W","W","Y","E","P"],["R","O","I","L","W","G","L","Y","S","I","A","D"],["D","Q","I","O","E","E","N","M","B","I","L","V"],["O","P","L","P","G","G","R","V","S","A","Y","H"],["J","B","C","B","W","Y","S","X","T","O","L","G"],["N","E","D","R","A","G","H","E","J","N","I","E"],["G","R","N","A","R","G","P","Y","E","B","L","O"],["R","L","R","W","T","E","J","Z","F","D","J","A"],["U","V","V","F","J","O","R","C","H","I","D","A"]],"words":["DAISY","FLOWER","GARDEN","LILY","ORCHID","PETAL","SEED","TULIP"],"placements":[{"word":"FLOWER","cells":[[1,1],[2,2],[3,3],[4,4],[5,5],[6,6]]},{"word":"GARDEN","cells":[[8,5],[8,4],[8,3],[8,2],[8,1],[8,0]]},{"word":"ORCHID","cells":[[11,5],[11,6],[11,7],[11,8],[11,9],[11,10]]},{"word":"TULIP","cells":[[2,5],[3,4],[4,3],[5,2],[6,1]]},{"word":"DAISY","cells":[[4,11],[4,10],[4,9],[4,8],[4,7]]},{"word":"PETAL","cells":[[9,6],[8,7],[7,8],[6,9],[5,10]]},{"word":"LILY","cells":[[9,10],[8,10],[7,10],[6,10]]},{"word":"SEED","cells":[[7,6],[8,7],[9,8],[10,9]]}]}],"hard":[{"theme":"Dinosaurs","size":16,"grid":[["S","K","K","R","Q","R","A","P","T","O","R","A","T","Z","G","P"],["Y","U","P","O","Z","E","Y","D","E","E","J","J","D","A","G","A"],["O","C","X","S","H","M","O","W","I","Y","J","E","I","Z","F","L"],["O","R","I","J","Z","C","I","R","S","N","G","Y","J","B","E","L"],["D","U","O","B","N","F","F","P","A","F","P","A","H","F","N","O"],["I","A","X","Q","G","U","H","H","U","P","U","U","W","W","T","S"],["P","S","P","R","J","M","H","I","R","V","T","H","O","G","M","A"],["L","O","E","K","N","N","T","K","O","I","D","O","B","A","Z","U"],["O","R","S","H","V","O","H","Y","P","K","U","Y","R","Q","K","R"],["D","E","T","L","U","D","I","S","O","A","Q","Z","T","E","E","S"],["O","T","R","P","Y","O","Y","R","D","J","E","N","M","U","W","A"],["C","P","O","W","P","N","X","T","M","S","T","B","F","Z","T","E"],["U","T","M","R","R","A","D","X","J","R","F","U","P","D","C","C"],["S","H","A","I","G","U","B","R","Q","K","V","B","B","G","W","D"],["E","F","S","T","H","G","U","J","Z","N","H","M","T","I","E","I"],["Y","M","D","Q","W","I","P","H","A","D","R","O","S","A","U","R"]],"words":["ALLOSAUR","DIPLODOCUS","EORAPTOR","HADROSAUR","IGUANODON","PTEROSAUR","RAPTOR","SAUROPOD"],"placements":[{"word":"DIPLODOCUS","cells":[[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0]]},{"word":"IGUANODON","cells":[[15,5],[14,5],[13,5],[12,5],[11,5],[10,5],[9,5],[8,5],[7,5]]},{"word":"HADROSAUR","cells":[[15,7],[15,8],[15,9],[15,10],[15,11],[15,12],[15,13],[15,14],[15,15]]},{"word":"PTEROSAUR","cells":[[11,1],[10,1],[9,1],[8,1],[7,1],[6,1],[5,1],[4,1],[3,1]]},{"word":"SAUROPOD","cells":[[3,8],[4,8],[5,8],[6,8],[7,8],[8,8],[9,8],[10,8]]},{"word":"ALLOSAUR","cells":[[1,15],[2,15],[3,15],[4,15],[5,15],[6,15],[7,15],[8,15]]},{"word":"EORAPTOR","cells":[[1,5],[2,6],[3,7],[4,8],[5,9],[6,10],[7,11],[8,12]]},{"word":"RAPTOR","cells":[[0,5],[0,6],[0,7],[0,8],[0,9],[0,10]]}]},{"theme":"Countries","size":16,"grid":[["M","S","Y","I","Q","F","Q","P","R","Y","H","Y","R","G","J","Z"],["Q","R","V","M","O","D","F","B","G","L","N","A","P","A","J","V"],["T","C","G","B","J","T","C","N","A","Y","Z","T","H","K","R","Z"],["L","A","P","Z","T","J","J","N","G","C","T","H","T","A","V","K"],["T","B","O","O","T","C","I","C","A","N","A","D","A","C","F","S"],["X","J","V","Y","X","T","W","W","H","M","L","I","Z","A","R","B"],["K","Z","Y","N","N","J","X","G","P","T","A","T","U","Y","L","W"],["Z","Z","L","E","K","S","E","A","A","J","I","M","F","D","M","Q"],["W","J","G","Y","W","C","C","N","A","T","S","W","J","K","O","U"],["C","R","Z","N","U","X","N","Q","V","K","M","E","X","I","C","O"],["A","A","S","A","K","C","A","L","A","A","G","T","H","C","L","K"],["K","F","R","M","R","M","R","M","M","J","K","S","F","X","P","H"],["W","H","A","R","V","B","F","I","N","N","I","K","F","B","U","B"],["U","O","F","E","T","S","R","X","Z","U","G","X","A","M","X","D"],["X","O","D","G","W","I","J","J","B","G","I","V","Z","Y","L","C"],["Q","A","I","L","A","R","T","S","U","A","C","N","B","H","N","Q"]],"words":["ARGENTINA","AUSTRALIA","BRAZIL","CANADA","FRANCE","GERMANY","JAPAN","MEXICO"],"placements":[{"word":"AUSTRALIA","cells":[[15,9],[15,8],[15,7],[15,6],[15,5],[15,4],[15,3],[15,2],[15,1]]},{"word":"ARGENTINA","cells":[[10,0],[9,1],[8,2],[7,3],[6,4],[5,5],[4,6],[3,7],[2,8]]},{"word":"GERMANY","cells":[[14,3],[13,3],[12,3],[11,3],[10,3],[9,3],[8,3]]},{"word":"BRAZIL","cells":[[5,15],[5,14],[5,13],[5,12],[5,11],[5,10]]},{"word":"FRANCE","cells":[[12,6],[11,6],[10,6],[9,6],[8,6],[7,6]]},{"word":"CANADA","cells":[[4,7],[4,8],[4,9],[4,10],[4,11],[4,12]]},{"word":"MEXICO","cells":[[9,10],[9,11],[9,12],[9,13],[9,14],[9,15]]},{"word":"JAPAN","cells":[[1,14],[1,13],[1,12],[1,11],[1,10]]}]},{"theme":"Mythology","size":16,"grid":[["N","P","S","P","O","L","C","Y","C","F","C","H","T","C","L","W"],["S","Y","M","Y","I","L","E","P","A","J","A","A","J","H","D","W"],["P","Z","I","A","L","Y","P","H","O","E","N","I","X","R","J","Z"],["G","O","U","M","B","H","C","B","U","F","V","F","Z","O","S","B"],["Q","D","S","P","Z","I","Y","U","U","B","A","I","B","Q","Y","J"],["F","O","L","U","R","F","R","I","R","Z","K","W","W","L","H","R"],["B","S","A","C","S","I","O","H","K","U","R","S","G","A","O","W"],["L","O","R","K","R","A","F","E","S","S","A","E","C","H","G","F"],["X","A","A","X","L","Q","G","O","E","G","K","T","P","J","J","A"],["U","T","N","S","Z","Y","G","E","N","Q","E","D","N","Z","Y","S"],["U","J","Q","A","W","M","B","P","P","I","N","N","O","E","B","U"],["N","L","W","I","P","K","T","B","V","R","F","B","Q","M","C","D"],["J","D","M","I","N","O","T","A","U","R","X","F","T","E","G","E"],["K","N","T","J","X","Q","N","M","Z","E","W","J","I","D","G","M"],["H","D","D","R","R","Q","U","C","K","Z","W","Q","S","R","L","C"],["C","U","E","U","C","W","N","Z","P","O","D","E","X","Y","G","V"]],"words":["CENTAUR","CYCLOPS","GRIFFIN","KRAKEN","MEDUSA","MINOTAUR","PEGASUS","PHOENIX"],"placements":[{"word":"MINOTAUR","cells":[[12,2],[12,3],[12,4],[12,5],[12,6],[12,7],[12,8],[12,9]]},{"word":"PEGASUS","cells":[[10,8],[9,7],[8,6],[7,5],[6,4],[5,3],[4,2]]},{"word":"CYCLOPS","cells":[[0,8],[0,7],[0,6],[0,5],[0,4],[0,3],[0,2]]},{"word":"CENTAUR","cells":[[11,14],[10,13],[9,12],[8,11],[7,10],[6,9],[5,8]]},{"word":"PHOENIX","cells":[[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12]]},{"word":"GRIFFIN","cells":[[15,14],[14,13],[13,12],[12,11],[11,10],[10,9],[9,8]]},{"word":"MEDUSA","cells":[[13,15],[12,15],[11,15],[10,15],[9,15],[8,15]]},{"word":"KRAKEN","cells":[[5,10],[6,10],[7,10],[8,10],[9,10],[10,10]]}]},{"theme":"Continents","size":16,"grid":[["G","A","H","Z","G","M","B","M","P","I","S","H","K","G","D","C"],["X","Z","E","W","J","J","R","H","N","X","N","N","O","I","O","B"],["W","M","F","U","C","J","X","Z","P","J","V","V","A","T","E","R"],["P","E","C","Z","R","W","O","L","S","I","J","N","R","Q","Z","U"],["A","U","Q","I","Y","O","B","C","S","U","S","K","Q","O","P","K"],["C","R","I","D","X","O","P","O","E","B","F","V","P","J","E","L"],["I","A","O","H","E","J","K","E","J","A","A","C","I","R","F","A"],["R","S","B","A","X","S","O","G","C","C","N","Q","C","I","W","R"],["E","I","W","C","A","U","S","T","R","A","L","I","A","L","Z","A"],["M","A","G","V","O","R","R","F","U","P","T","S","A","Q","H","G"],["A","Q","M","E","X","E","V","N","K","J","J","G","P","I","F","M"],["F","I","U","X","X","S","Z","H","B","A","J","A","T","O","F","Z"],["I","D","P","D","M","G","U","V","L","D","C","Y","T","Q","J","A"],["Z","C","B","Y","O","I","W","E","D","F","I","Y","E","T","D","K"],["A","C","I","T","C","R","A","T","N","A","J","D","T","H","V","A"],["G","P","N","J","V","D","S","X","I","D","R","T","X","N","P","R"]],"words":["AFRICA","AMERICA","ANTARCTICA","AUSTRALIA","EURASIA","EUROPE","OCEANIA"],"placements":[{"word":"ANTARCTICA","cells":[[14,9],[14,8],[14,7],[14,6],[14,5],[14,4],[14,3],[14,2],[14,1],[14,0]]},{"word":"AUSTRALIA","cells":[[8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],[8,11],[8,12]]},{"word":"AMERICA","cells":[[10,0],[9,0],[8,0],[7,0],[6,0],[5,0],[4,0]]},{"word":"OCEANIA","cells":[[3,6],[4,7],[5,8],[6,9],[7,10],[8,11],[9,12]]},{"word":"EURASIA","cells":[[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1]]},{"word":"EUROPE","cells":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]},{"word":"AFRICA","cells":[[6,15],[6,14],[6,13],[6,12],[6,11],[6,10]]}]},{"theme":"Sciences","size":16,"grid":[["E","Q","V","A","R","P","Z","Y","C","X","Y","I","W","I","Y","R"],["U","R","U","B","D","M","W","S","W","M","N","P","Q","M","N","F"],["R","C","F","D","S","E","X","N","O","Y","L","D","O","Y","E","H"],["Q","N","V","S","S","D","X","N","Y","Y","M","T","R","Y","C","G"],["X","C","C","L","J","S","O","G","F","C","A","Z","E","G","O","X"],["N","Q","S","B","W","R","R","O","B","N","J","P","K","O","L","L"],["V","K","V","J","T","J","R","G","A","A","X","X","Z","L","O","X"],["Z","B","C","S","J","F","S","Z","R","W","T","D","S","O","G","V"],["U","S","A","Q","S","P","W","Y","C","B","F","X","X","E","Y","A"],["L","L","Y","R","T","S","I","M","E","H","C","R","B","G","W","R"],["O","V","I","N","R","M","W","A","W","Q","J","Q","O","V","P","S"],["B","Y","T","K","Z","L","U","U","K","F","Q","B","F","Q","B","P"],["W","D","P","H","B","M","I","S","C","I","S","Y","H","P","U","A"],["T","L","Q","M","L","B","S","A","G","W","U","X","R","C","G","U"],["P","V","A","Q","N","E","C","B","T","B","I","O","L","O","G","Y"],["O","R","U","A","H","K","G","L","Y","G","O","L","O","O","Z","S"]],"words":["ANATOMY","ASTRONOMY","BIOLOGY","CHEMISTRY","ECOLOGY","GEOLOGY","PHYSICS","ZOOLOGY"],"placements":[{"word":"CHEMISTRY","cells":[[9,10],[9,9],[9,8],[9,7],[9,6],[9,5],[9,4],[9,3],[9,2]]},{"word":"ASTRONOMY","cells":[[8,2],[7,3],[6,4],[5,5],[4,6],[3,7],[2,8],[1,9],[0,10]]},{"word":"BIOLOGY","cells":[[14,9],[14,10],[14,11],[14,12],[14,13],[14,14],[14,15]]},{"word":"PHYSICS","cells":[[12,13],[12,12],[12,11],[12,10],[12,9],[12,8],[12,7]]},{"word":"GEOLOGY","cells":[[9,13],[8,13],[7,13],[6,13],[5,13],[4,13],[3,13]]},{"word":"ECOLOGY","cells":[[2,14],[3,14],[4,14],[5,14],[6,14],[7,14],[8,14]]},{"word":"ANATOMY","cells":[[6,8],[5,9],[4,10],[3,11],[2,12],[1,13],[0,14]]},{"word":"ZOOLOGY","cells":[[15,14],[15,13],[15,12],[15,11],[15,10],[15,9],[15,8]]}]},{"theme":"Wild Animals","size":16,"grid":[["L","A","C","V","O","O","T","R","T","W","R","H","O","Y","Q","B"],["O","H","X","F","L","Q","M","Z","Z","J","J","N","Q","N","G","B"],["F","E","V","J","A","L","L","I","R","O","G","A","B","Z","E","C"],["K","S","K","D","F","T","R","K","O","M","U","Y","G","Y","K","K"],["A","A","E","J","F","T","N","G","M","C","L","C","O","U","W","A"],["T","X","P","X","U","D","Q","A","N","I","D","W","V","U","A","S"],["F","C","O","J","B","I","A","K","H","Q","H","T","E","B","C","R"],["L","Q","L","S","K","O","O","Z","E","P","E","F","Q","Y","I","R"],["M","V","E","I","V","I","K","D","E","I","E","F","W","Q","D","K"],["S","M","T","Q","C","D","G","I","B","F","H","L","L","C","I","W"],["S","W","N","G","H","D","R","I","G","U","F","G","E","V","W","V"],["Z","V","A","S","E","Q","X","A","X","G","R","A","O","M","N","E"],["G","T","N","J","E","P","H","E","P","Z","E","U","R","V","Q","A"],["G","U","A","P","T","K","L","F","B","O","N","F","H","I","J","R"],["W","B","P","K","A","K","F","O","W","R","E","T","D","L","G","L"],["I","L","F","G","H","R","O","G","R","U","W","L","T","W","P","B"]],"words":["ANTELOPE","BUFFALO","CHEETAH","ELEPHANT","GIRAFFE","GORILLA","JAGUAR","LEOPARD"],"placements":[{"word":"ELEPHANT","cells":[[10,12],[9,11],[8,10],[7,9],[6,8],[5,7],[4,6],[3,5]]},{"word":"ANTELOPE","cells":[[11,2],[10,2],[9,2],[8,2],[7,2],[6,2],[5,2],[4,2]]},{"word":"GIRAFFE","cells":[[14,14],[13,13],[12,12],[11,11],[10,10],[9,9],[8,8]]},{"word":"LEOPARD","cells":[[15,11],[14,10],[13,9],[12,8],[11,7],[10,6],[9,5]]},{"word":"CHEETAH","cells":[[9,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4]]},{"word":"GORILLA","cells":[[2,10],[2,9],[2,8],[2,7],[2,6],[2,5],[2,4]]},{"word":"BUFFALO","cells":[[6,4],[5,4],[4,4],[3,4],[2,4],[1,4],[0,4]]},{"word":"JAGUAR","cells":[[1,10],[2,11],[3,12],[4,13],[5,14],[6,15]]}]},{"theme":"Music","size":16,"grid":[["W","O","T","R","E","C","N","O","C","V","I","Z","M","M","G","O"],["F","N","J","I","F","U","C","H","T","N","J","J","X","J","D","B"],["T","O","W","Q","G","Y","P","V","Z","V","F","O","O","O","Q","Z"],["S","Q","P","E","R","I","D","G","C","K","D","C","R","C","Q","I"],["R","M","O","W","Z","E","L","O","Z","V","M","U","C","U","A","G"],["V","D","O","B","C","F","R","K","L","X","Z","R","H","X","A","D"],["A","S","O","Q","W","E","A","H","G","E","U","A","E","Y","H","N"],["O","F","E","K","U","Q","K","I","Y","O","M","I","S","V","Q","O"],["Y","S","V","R","H","M","A","Q","E","T","R","N","T","E","W","Z"],["P","X","O","L","D","R","Z","I","R","K","H","B","R","I","U","H"],["N","L","F","Q","M","X","C","H","F","N","V","M","A","Q","N","T"],["D","C","I","Z","B","E","A","T","A","N","O","S","Q","R","J","D"],["R","W","J","W","N","F","R","E","S","O","P","M","O","C","O","T"],["P","J","U","Y","I","Z","D","G","K","M","F","H","Y","S","H","K"],["O","Y","B","A","L","Y","Y","N","O","H","P","M","Y","S","K","J"],["R","M","A","S","B","W","D","X","U","Y","N","O","M","R","A","H"]],"words":["COMPOSER","CONCERTO","HARMONY","MELODY","ORCHESTRA","RHYTHM","SONATA","SYMPHONY"],"placements":[{"word":"ORCHESTRA","cells":[[2,12],[3,12],[4,12],[5,12],[6,12],[7,12],[8,12],[9,12],[10,12]]},{"word":"SYMPHONY","cells":[[14,13],[14,12],[14,11],[14,10],[14,9],[14,8],[14,7],[14,6]]},{"word":"CONCERTO","cells":[[0,8],[0,7],[0,6],[0,5],[0,4],[0,3],[0,2],[0,1]]},{"word":"COMPOSER","cells":[[12,13],[12,12],[12,11],[12,10],[12,9],[12,8],[12,7],[12,6]]},{"word":"HARMONY","cells":[[15,15],[15,14],[15,13],[15,12],[15,11],[15,10],[15,9]]},{"word":"MELODY","cells":[[7,10],[6,9],[5,8],[4,7],[3,6],[2,5]]},{"word":"RHYTHM","cells":[[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]]},{"word":"SONATA","cells":[[11,11],[11,10],[11,9],[11,8],[11,7],[11,6]]}]},{"theme":"Cars","size":16,"grid":[["E","T","T","E","V","R","O","C","C","I","O","Q","J","U","P","J"],["K","O","I","C","A","M","A","R","O","U","D","S","I","A","E","Q"],["A","W","B","V","W","I","U","Y","P","T","Y","U","O","D","H","F"],["T","F","P","N","L","J","L","I","Y","A","C","B","Y","K","C","G"],["S","C","R","E","X","S","L","E","F","U","U","P","P","F","S","A"],["X","M","L","T","T","J","H","A","W","S","G","I","W","D","R","W"],["Q","U","O","T","Q","G","M","V","S","L","W","T","K","F","O","C"],["S","J","Q","A","T","O","Y","O","T","H","X","M","J","W","P","K"],["C","I","W","Q","E","E","O","I","R","A","R","R","E","F","S","O"],["F","T","B","A","M","R","Y","A","M","Y","C","U","G","M","J","J"],["R","T","Q","A","H","F","L","N","J","P","B","G","C","R","R","B"],["D","A","E","X","X","S","E","N","Z","I","D","N","L","M","L","L"],["B","G","B","H","E","A","C","N","Q","I","O","C","B","B","M","M"],["T","U","P","T","I","Q","L","E","Y","G","N","A","T","S","U","M"],["L","B","Y","P","B","I","B","S","L","U","S","U","N","U","A","B"],["C","D","P","R","D","X","V","I","P","V","V","Q","G","I","H","T"]],"words":["BUGATTI","CAMARO","CORVETTE","FERRARI","MUSTANG","PORSCHE","TESLA","TOYOTA"],"placements":[{"word":"CORVETTE","cells":[[0,7],[0,6],[0,5],[0,4],[0,3],[0,2],[0,1],[0,0]]},{"word":"FERRARI","cells":[[8,13],[8,12],[8,11],[8,10],[8,9],[8,8],[8,7]]},{"word":"MUSTANG","cells":[[13,15],[13,14],[13,13],[13,12],[13,11],[13,10],[13,9]]},{"word":"BUGATTI","cells":[[14,1],[13,1],[12,1],[11,1],[10,1],[9,1],[8,1]]},{"word":"PORSCHE","cells":[[7,14],[6,14],[5,14],[4,14],[3,14],[2,14],[1,14]]},{"word":"TOYOTA","cells":[[7,8],[7,7],[7,6],[7,5],[7,4],[7,3]]},{"word":"CAMARO","cells":[[1,3],[1,4],[1,5],[1,6],[1,7],[1,8]]},{"word":"TESLA","cells":[[13,3],[12,4],[11,5],[10,6],[9,7]]}]},{"theme":"Vacations","size":16,"grid":[["D","S","H","Q","O","W","L","J","A","E","L","Z","O","H","Z","U"],["N","R","W","D","E","D","V","K","V","Z","L","O","M","E","H","E"],["J","Z","F","K","P","R","A","I","E","U","W","A","F","U","Y","C"],["W","P","Z","G","I","N","E","T","J","W","R","E","N","Q","Y","I"],["E","K","Z","E","N","S","U","G","I","Q","Y","T","O","J","A","H"],["H","L","C","P","S","I","X","A","N","I","V","U","W","N","O","J"],["A","E","U","R","G","I","L","U","O","I","B","K","C","L","M","C"],["L","G","U","K","M","U","U","I","B","W","P","V","M","L","O","T"],["B","K","N","Y","I","W","E","R","A","U","Z","M","Q","V","U","B"],["C","U","K","I","G","K","J","N","C","S","D","B","A","I","N","K"],["T","G","V","K","H","N","O","N","H","K","R","C","T","C","T","O"],["R","L","N","X","F","S","I","I","O","E","A","B","D","F","A","Z"],["O","O","W","H","V","V","I","K","E","T","K","T","W","Q","I","H"],["S","G","P","Z","R","V","J","F","I","V","K","F","U","J","N","V"],["E","N","G","W","Y","P","L","O","O","H","Z","T","F","F","O","U"],["R","Q","Z","K","T","M","N","K","N","U","C","J","U","O","H","T"]],"words":["CAMPING","CRUISE","FISHING","HIKING","MOUNTAIN","RESORT","SAILING","VACATION"],"placements":[{"word":"VACATION","cells":[[8,13],[9,12],[10,11],[11,10],[12,9],[13,8],[14,7],[15,6]]},{"word":"MOUNTAIN","cells":[[6,14],[7,14],[8,14],[9,14],[10,14],[11,14],[12,14],[13,14]]},{"word":"CAMPING","cells":[[10,13],[9,12],[8,11],[7,10],[6,9],[5,8],[4,7]]},{"word":"FISHING","cells":[[13,7],[12,6],[11,5],[10,4],[9,3],[8,2],[7,1]]},{"word":"SAILING","cells":[[9,9],[8,8],[7,7],[6,6],[5,5],[4,4],[3,3]]},{"word":"HIKING","cells":[[14,9],[13,8],[12,7],[11,6],[10,5],[9,4]]},{"word":"CRUISE","cells":[[9,8],[8,7],[7,6],[6,5],[5,4],[4,3]]},{"word":"RESORT","cells":[[15,0],[14,0],[13,0],[12,0],[11,0],[10,0]]}]},{"theme":"Cooking","size":16,"grid":[["F","R","X","T","D","W","X","J","K","J","G","X","A","F","J","B"],["X","B","O","S","V","E","L","Q","H","T","J","U","N","U","T","O"],["E","I","J","A","Y","Z","E","L","D","Z","W","T","T","P","A","I"],["X","W","S","X","S","O","U","Q","G","O","V","W","A","X","W","L"],["Q","Z","K","U","E","T","D","U","E","C","W","Y","G","D","Y","I"],["C","P","D","U","L","F","I","H","Q","T","W","V","F","D","R","N"],["I","X","U","S","H","H","U","N","Z","I","T","R","L","N","B","G"],["K","N","G","X","N","F","L","K","G","P","Y","Q","O","L","S","A"],["U","J","E","N","R","Q","N","B","I","I","A","Z","E","J","R","D"],["H","Y","D","H","I","I","J","H","N","Y","Y","N","Z","U","P","F"],["F","U","Z","Z","C","K","C","G","H","D","D","F","A","Y","X","U"],["W","P","Q","F","R","T","A","B","W","E","D","Z","N","G","F","S"],["W","Y","Y","S","A","H","I","B","R","Z","B","Q","A","M","F","H"],["U","L","S","X","Z","H","T","K","C","K","P","O","W","W","V","V"],["R","E","C","I","P","E","G","R","I","L","L","I","N","G","P","G"],["R","Z","S","W","S","G","M","M","U","R","I","D","S","B","H","N"]],"words":["BAKING","BLENDER","BOILING","FRYING","GRILLING","KITCHEN","RECIPE","ROASTING"],"placements":[{"word":"ROASTING","cells":[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]]},{"word":"GRILLING","cells":[[14,6],[14,7],[14,8],[14,9],[14,10],[14,11],[14,12],[14,13]]},{"word":"KITCHEN","cells":[[13,7],[12,6],[11,5],[10,4],[9,3],[8,2],[7,1]]},{"word":"BOILING","cells":[[0,15],[1,15],[2,15],[3,15],[4,15],[5,15],[6,15]]},{"word":"BLENDER","cells":[[6,14],[7,13],[8,12],[9,11],[10,10],[11,9],[12,8]]},{"word":"RECIPE","cells":[[14,0],[14,1],[14,2],[14,3],[14,4],[14,5]]},{"word":"BAKING","cells":[[12,7],[11,6],[10,5],[9,4],[8,3],[7,2]]},{"word":"FRYING","cells":[[5,12],[6,11],[7,10],[8,9],[9,8],[10,7]]}]},{"theme":"Technology","size":16,"grid":[["F","T","S","W","R","R","A","D","K","E","Y","B","O","A","R","D"],["S","O","A","T","E","N","R","E","T","N","I","U","T","G","O","U"],["L","A","B","L","W","W","C","K","K","W","R","B","O","T","P","V"],["B","R","O","W","S","E","R","O","P","S","W","D","P","L","F","T"],["I","T","S","E","E","A","Q","P","A","B","G","Q","C","O","D","G"],["R","A","V","K","R","E","T","U","P","M","O","C","X","L","E","B"],["S","B","P","G","D","K","S","B","A","V","H","G","R","R","B","A"],["Y","L","J","B","U","Q","G","H","H","C","G","C","S","T","K","K"],["A","E","T","Q","G","I","C","I","X","G","O","U","T","E","K","Z"],["X","T","I","K","M","L","Y","Y","E","W","F","C","D","R","D","I"],["Q","F","R","Z","O","E","I","T","K","N","E","P","U","O","Y","P"],["L","U","Q","E","N","I","D","C","J","O","B","N","X","P","X","R"],["B","T","H","M","I","C","M","G","J","M","A","R","G","O","R","P"],["P","Q","J","F","T","R","T","V","W","V","S","H","T","N","O","G"],["Q","E","A","Z","O","Z","K","N","R","P","O","T","P","A","L","O"],["N","T","U","P","R","C","D","R","J","U","J","T","U","S","I","B"]],"words":["BROWSER","COMPUTER","INTERNET","KEYBOARD","LAPTOP","MONITOR","PROGRAM","TABLET"],"placements":[{"word":"COMPUTER","cells":[[5,11],[5,10],[5,9],[5,8],[5,7],[5,6],[5,5],[5,4]]},{"word":"INTERNET","cells":[[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[1,4],[1,3]]},{"word":"KEYBOARD","cells":[[0,8],[0,9],[0,10],[0,11],[0,12],[0,13],[0,14],[0,15]]},{"word":"MONITOR","cells":[[9,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4]]},{"word":"PROGRAM","cells":[[12,15],[12,14],[12,13],[12,12],[12,11],[12,10],[12,9]]},{"word":"BROWSER","cells":[[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6]]},{"word":"LAPTOP","cells":[[14,14],[14,13],[14,12],[14,11],[14,10],[14,9]]},{"word":"TABLET","cells":[[4,1],[5,1],[6,1],[7,1],[8,1],[9,1]]}]},{"theme":"Construction","size":16,"grid":[["B","K","H","Z","S","H","F","W","C","T","T","S","X","I","E","U"],["V","L","N","N","Q","E","F","Q","L","P","G","T","D","G","S","J"],["R","U","U","G","B","Y","M","B","T","N","Y","H","G","D","G","N"],["B","E","D","E","T","N","W","N","R","E","M","M","A","H","G","T"],["I","X","Z","H","P","W","N","R","O","T","A","V","A","C","X","E"],["R","K","J","O","P","R","K","X","H","J","N","R","R","V","Z","H"],["K","E","E","I","D","Y","I","H","D","H","O","T","B","T","C","Q"],["Q","T","G","F","G","L","R","N","K","Z","I","X","E","W","F","H"],["W","E","N","H","N","U","L","Y","T","Q","T","A","F","N","P","I"],["N","R","D","Q","I","R","X","U","I","L","A","V","W","X","M","E"],["B","C","U","L","D","R","J","D","B","B","D","Z","S","L","E","J"],["P","N","D","A","L","W","R","M","V","O","N","S","W","D","V","D"],["D","O","B","Z","I","M","M","I","H","D","U","Y","O","Y","O","P"],["R","C","V","V","U","L","T","N","D","Q","O","U","W","I","F","X"],["B","Q","H","Y","B","H","F","X","E","M","F","G","X","Z","F","T"],["I","S","C","E","M","E","N","T","B","E","T","C","B","J","D","M"]],"words":["BLUEPRINT","BUILDING","BULLDOZER","CEMENT","CONCRETE","EXCAVATOR","FOUNDATION","HAMMER"],"placements":[{"word":"FOUNDATION","cells":[[14,10],[13,10],[12,10],[11,10],[10,10],[9,10],[8,10],[7,10],[6,10],[5,10]]},{"word":"BLUEPRINT","cells":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8]]},{"word":"BULLDOZER","cells":[[10,8],[9,7],[8,6],[7,5],[6,4],[5,3],[4,2],[3,1],[2,0]]},{"word":"EXCAVATOR","cells":[[4,15],[4,14],[4,13],[4,12],[4,11],[4,10],[4,9],[4,8],[4,7]]},{"word":"BUILDING","cells":[[14,4],[13,4],[12,4],[11,4],[10,4],[9,4],[8,4],[7,4]]},{"word":"CONCRETE","cells":[[13,1],[12,1],[11,1],[10,1],[9,1],[8,1],[7,1],[6,1]]},{"word":"HAMMER","cells":[[3,13],[3,12],[3,11],[3,10],[3,9],[3,8]]},{"word":"CEMENT","cells":[[15,2],[15,3],[15,4],[15,5],[15,6],[15,7]]}]},{"theme":"Olympics","size":16,"grid":[["C","L","F","L","B","V","K","P","G","X","G","I","G","K","S","C"],["H","R","K","M","O","Q","Y","N","B","E","D","G","Y","C","B","E"],["I","V","D","H","I","O","I","U","E","G","E","N","M","Q","G","H"],["B","B","D","V","T","M","J","F","J","F","R","I","N","K","R","W"],["T","X","N","T","M","M","J","C","S","X","Y","L","A","O","L","G"],["P","K","P","I","A","N","U","A","Z","Y","W","C","S","J","N","C"],["Y","B","W","C","Z","K","I","K","A","W","I","Y","T","I","J","H"],["K","S","D","E","G","D","X","L","T","R","Q","C","V","R","N","Q"],["S","E","W","I","F","B","F","N","E","I","C","I","X","E","T","I"],["Y","W","Z","A","S","D","I","O","L","V","D","H","J","P","Y","H"],["G","N","I","C","N","E","F","H","G","O","A","U","E","H","Q","C"],["W","Y","F","Z","C","U","V","T","B","J","B","J","V","R","O","H"],["C","T","N","M","A","J","F","A","C","Q","S","U","D","E","Y","Z"],["T","Z","F","I","U","H","H","R","I","E","P","B","H","W","V","T"],["G","O","S","G","S","T","V","A","Q","V","Z","L","S","V","I","G"],["I","P","D","J","W","F","V","M","L","E","F","Y","Q","P","S","M"]],"words":["ARCHERY","CYCLING","DIVING","FENCING","GYMNAST","JAVELIN","MARATHON","SWIMMING"],"placements":[{"word":"MARATHON","cells":[[15,7],[14,7],[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]]},{"word":"SWIMMING","cells":[[7,1],[6,2],[5,3],[4,4],[3,5],[2,6],[1,7],[0,8]]},{"word":"GYMNAST","cells":[[0,12],[1,12],[2,12],[3,12],[4,12],[5,12],[6,12]]},{"word":"ARCHERY","cells":[[6,8],[7,9],[8,10],[9,11],[10,12],[11,13],[12,14]]},{"word":"JAVELIN","cells":[[11,11],[10,10],[9,9],[8,8],[7,7],[6,6],[5,5]]},{"word":"CYCLING","cells":[[7,11],[6,11],[5,11],[4,11],[3,11],[2,11],[1,11]]},{"word":"FENCING","cells":[[10,6],[10,5],[10,4],[10,3],[10,2],[10,1],[10,0]]},{"word":"DIVING","cells":[[9,10],[8,11],[7,12],[6,13],[5,14],[4,15]]}]},{"theme":"Galaxies","size":16,"grid":[["M","M","I","W","M","V","V","Q","Q","E","V","I","O","P","D","K"],["Q","C","O","M","E","T","V","S","R","B","V","W","Q","U","S","T"],["A","M","R","E","H","U","C","I","B","B","Q","V","M","O","M","V"],["E","N","O","J","T","N","Y","G","J","O","M","W","M","H","E","C"],["L","Q","E","U","O","O","N","W","K","S","D","S","K","A","J","G"],["C","B","T","B","I","N","X","T","S","N","O","A","C","Y","G","T"],["K","J","E","W","U","E","R","D","A","C","S","U","X","A","G","R"],["G","K","M","N","O","L","P","S","T","T","G","R","L","J","N","W"],["G","Q","W","L","B","V","A","J","E","P","G","A","S","Y","A","F"],["D","C","E","B","T","Q","A","R","L","D","X","R","L","M","E","V"],["M","I","H","Z","G","O","O","B","L","Y","A","C","G","D","X","Z"],["E","R","D","Q","A","I","R","J","I","J","K","O","X","R","L","E"],["L","Z","Q","V","D","Z","Z","N","T","A","G","X","Y","B","A","L"],["W","T","G","B","V","D","M","Y","E","V","N","E","K","V","D","C"],["V","H","U","J","F","F","C","Q","G","Q","A","H","R","O","I","M"],["O","K","Q","K","S","C","T","E","L","E","S","C","O","P","E","N"]],"words":["ASTEROID","COMET","COSMOS","GALAXY","METEOR","NEBULA","SATELLITE","TELESCOPE"],"placements":[{"word":"SATELLITE","cells":[[5,8],[6,8],[7,8],[8,8],[9,8],[10,8],[11,8],[12,8],[13,8]]},{"word":"TELESCOPE","cells":[[15,6],[15,7],[15,8],[15,9],[15,10],[15,11],[15,12],[15,13],[15,14]]},{"word":"ASTEROID","cells":[[5,11],[6,10],[7,9],[8,8],[9,7],[10,6],[11,5],[12,4]]},{"word":"GALAXY","cells":[[5,14],[6,13],[7,12],[8,11],[9,10],[10,9]]},{"word":"METEOR","cells":[[7,2],[6,2],[5,2],[4,2],[3,2],[2,2]]},{"word":"NEBULA","cells":[[3,1],[4,2],[5,3],[6,4],[7,5],[8,6]]},{"word":"COSMOS","cells":[[6,9],[5,10],[4,11],[3,12],[2,13],[1,14]]},{"word":"COMET","cells":[[1,1],[1,2],[1,3],[1,4],[1,5]]}]},{"theme":"Adventure","size":16,"grid":[["V","B","A","F","A","X","J","R","P","H","T","O","C","A","Q","Z"],["C","N","Y","B","S","V","U","P","E","I","S","V","I","J","O","U"],["V","V","V","I","L","D","N","H","E","Y","M","A","F","E","J","E"],["T","Q","L","D","M","Z","G","E","T","E","B","U","V","K","D","F"],["V","H","E","K","I","B","L","J","P","N","K","O","C","N","N","T"],["S","V","T","T","U","C","E","I","X","R","N","H","E","F","A","R"],["D","L","L","Y","R","Z","R","M","Q","U","L","G","X","Q","L","E"],["P","E","L","Z","Q","A","R","C","E","O","F","Z","P","Z","S","A"],["Z","I","N","L","T","Q","O","O","W","J","G","T","L","I","I","S"],["F","R","W","E","Z","M","W","C","X","U","I","A","O","O","O","U"],["U","I","K","G","P","V","V","O","Y","A","G","E","R","M","V","R"],["C","Y","V","A","O","R","I","P","Q","K","Q","V","E","Z","X","E"],["X","V","S","O","S","D","L","A","A","S","R","T","R","V","Y","C"],["X","S","A","T","F","Z","A","B","A","V","W","H","E","C","L","G"],["N","Q","G","B","B","T","X","R","Y","S","I","H","T","V","J","C"],["P","K","D","O","U","C","W","H","A","U","F","S","F","Y","Z","H"]],"words":["COMPASS","EXPLORER","ISLAND","JOURNEY","JUNGLE","PIRATE","TREASURE","VOYAGE"],"placements":[{"word":"TREASURE","cells":[[4,15],[5,15],[6,15],[7,15],[8,15],[9,15],[10,15],[11,15]]},{"word":"EXPLORER","cells":[[5,12],[6,12],[7,12],[8,12],[9,12],[10,12],[11,12],[12,12]]},{"word":"COMPASS","cells":[[7,7],[8,6],[9,5],[10,4],[11,3],[12,2],[13,1]]},{"word":"JOURNEY","cells":[[8,9],[7,9],[6,9],[5,9],[4,9],[3,9],[2,9]]},{"word":"JUNGLE","cells":[[0,6],[1,6],[2,6],[3,6],[4,6],[5,6]]},{"word":"PIRATE","cells":[[4,8],[5,7],[6,6],[7,5],[8,4],[9,3]]},{"word":"ISLAND","cells":[[8,14],[7,14],[6,14],[5,14],[4,14],[3,14]]},{"word":"VOYAGE","cells":[[10,6],[10,7],[10,8],[10,9],[10,10],[10,11]]}]}]};
+
+(() => {
+  const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // DOM
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen  = document.getElementById('game-screen');
+  const congratsScreen = document.getElementById('congrats-screen');
+  const themeTitleEl = document.getElementById('theme-title');
+  const gridEl = document.getElementById('grid');
+  const overlayEl = document.getElementById('overlay');
+  const wordsListEl = document.getElementById('words-list');
+  const startBtn = document.getElementById('start-btn');
+  const newGameBtn = document.getElementById('new-game-btn');
+  const pills = document.querySelectorAll('.pill');
+
+  // Floating background shapes
+  (function spawnShapes() {
+    const wrap = document.getElementById('bg-shapes');
+    const colors = ['#ff6b9d', '#ffd93d', '#4ecdc4', '#c780fa', '#ff9f43', '#95e1d3'];
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement('div');
+      s.className = 'bg-shape';
+      const size = 60 + Math.random() * 100;
+      s.style.width = s.style.height = size + 'px';
+      s.style.left = (Math.random() * 100) + 'vw';
+      s.style.top = (Math.random() * 100) + 'vh';
+      s.style.background = colors[i % colors.length];
+      s.style.animationDelay = (Math.random() * 6) + 's';
+      s.style.animationDuration = (10 + Math.random() * 10) + 's';
+      wrap.appendChild(s);
+    }
+  })();
+
+  // State
+  let allPuzzles = null;
+  let difficulty = 'easy';
+  let puzzle = null;
+  let selectedCells = [];
+  let foundColors = [
+    '#ff6b9d', '#4ecdc4', '#ffd93d', '#c780fa', '#ff9f43',
+    '#95e1d3', '#7e57c2', '#26a69a', '#ec407a', '#42a5f5'
+  ];
+  let colorIdx = 0;
+
+  // ---- Pill toggle ----
+  pills.forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-diff]');
+      if (!btn) return;
+      pills.forEach(p => p.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.diff === btn.dataset.diff);
+      }));
+      difficulty = btn.dataset.diff;
+    });
+  });
+
+  // Puzzles are embedded inline — no fetch needed (works with file:// protocol)
+  function loadPuzzles() { allPuzzles = PUZZLES; }
+
+  // ---- Start / new game ----
+  startBtn.addEventListener('click', () => beginGame());
+  newGameBtn.addEventListener('click', () => beginGame());
+
+  function beginGame() {
+    setupScreen.classList.add('hidden');
+    congratsScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    const pool = allPuzzles[difficulty];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Clone so 'found' flags don't persist
+    puzzle = JSON.parse(JSON.stringify(pick));
+    puzzle.placements.forEach(p => p.found = false);
+    selectedCells = [];
+    colorIdx = 0;
+    renderPuzzle();
+  }
+
+  function renderPuzzle() {
+    themeTitleEl.textContent = puzzle.theme;
+    gridEl.style.gridTemplateColumns = `repeat(${puzzle.size}, 1fr)`;
+    gridEl.style.setProperty('--n', puzzle.size);
+    gridEl.innerHTML = '';
+    for (let r = 0; r < puzzle.size; r++) {
+      for (let c = 0; c < puzzle.size; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = puzzle.grid[r][c];
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        cell.style.setProperty('--n', puzzle.size);
+        cell.addEventListener('pointerdown', onCellTap);
+        gridEl.appendChild(cell);
+      }
+    }
+    overlayEl.setAttribute('viewBox', `0 0 ${puzzle.size} ${puzzle.size}`);
+    overlayEl.innerHTML = '';
+
+    wordsListEl.innerHTML = '';
+    for (const word of puzzle.words) {
+      const li = document.createElement('li');
+      li.textContent = word;
+      li.dataset.word = word;
+      wordsListEl.appendChild(li);
+    }
+  }
+
+  // ---- Cell interaction ----
+  function onCellTap(ev) {
+    if (ev.cancelable) ev.preventDefault();
+    const r = +ev.currentTarget.dataset.r;
+    const c = +ev.currentTarget.dataset.c;
+    handleTap(r, c);
+  }
+
+  function handleTap(r, c) {
+    if (!puzzle) return;
+
+    if (selectedCells.length === 0) {
+      selectedCells.push({ r, c });
+      updateSelectionUI();
+      return;
+    }
+
+    const last = selectedCells[selectedCells.length - 1];
+
+    // Click on last selected cell -> no-op
+    if (last.r === r && last.c === c) return;
+
+    // Check adjacency to last (8-direction, one step)
+    const dr = Math.abs(r - last.r), dc = Math.abs(c - last.c);
+    const isAdjacent = dr <= 1 && dc <= 1 && (dr + dc > 0);
+
+    // Already in selection?
+    const inSel = selectedCells.some(s => s.r === r && s.c === c);
+
+    if (isAdjacent && !inSel) {
+      selectedCells.push({ r, c });
+      updateSelectionUI();
+      checkForMatch();
+    } else {
+      // Undo: clear and start fresh at this cell
+      selectedCells = [{ r, c }];
+      updateSelectionUI();
+    }
+  }
+
+  function updateSelectionUI() {
+    const cells = gridEl.querySelectorAll('.cell');
+    const sel = new Set(selectedCells.map(s => `${s.r},${s.c}`));
+    cells.forEach(c => {
+      const key = `${c.dataset.r},${c.dataset.c}`;
+      c.classList.toggle('selected', sel.has(key));
+    });
+  }
+
+  function cellsMatch(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i][0] !== b[i][0] || a[i][1] !== b[i][1]) return false;
+    }
+    return true;
+  }
+
+  function checkForMatch() {
+    const selPath = selectedCells.map(s => [s.r, s.c]);
+    for (const placement of puzzle.placements) {
+      if (placement.found) continue;
+      if (placement.cells.length !== selPath.length) continue;
+      const reversed = placement.cells.slice().reverse();
+      if (cellsMatch(selPath, placement.cells) || cellsMatch(selPath, reversed)) {
+        wordFound(placement);
+        return;
+      }
+    }
+  }
+
+  function wordFound(placement) {
+    placement.found = true;
+    const color = foundColors[colorIdx++ % foundColors.length];
+
+    // Briefly show the highlight, then clear and animate the circle.
+    setTimeout(() => {
+      selectedCells = [];
+      updateSelectionUI();
+      drawCircle(placement, color);
+      const li = wordsListEl.querySelector(`li[data-word="${placement.word}"]`);
+      if (li) li.classList.add('found');
+
+      if (puzzle.placements.every(p => p.found)) {
+        setTimeout(showCongrats, 900);
+      }
+    }, 220);
+  }
+
+  function drawCircle(placement, color) {
+    const start = placement.cells[0];
+    const end   = placement.cells[placement.cells.length - 1];
+    // Cell center in viewBox coords: (col + 0.5, row + 0.5)
+    const x1 = start[1] + 0.5;
+    const y1 = start[0] + 0.5;
+    const x2 = end[1] + 0.5;
+    const y2 = end[0] + 0.5;
+    const path = document.createElementNS(SVG_NS, 'line');
+    path.setAttribute('x1', x1);
+    path.setAttribute('y1', y1);
+    path.setAttribute('x2', x2);
+    path.setAttribute('y2', y2);
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', '0.78');
+    path.setAttribute('vector-effect', 'non-scaling-stroke');
+    path.setAttribute('class', 'found-line');
+    // Use SVG attributes for path-based animation
+    overlayEl.appendChild(path);
+
+    // Set stroke-width relative to viewBox so it scales with the grid.
+    // (viewBox is sized 0..N, so 0.78 = ~78% of one cell wide — matches a pencil circle.)
+    path.removeAttribute('vector-effect');
+  }
+
+  function showCongrats() {
+    gameScreen.classList.add('hidden');
+    congratsScreen.classList.remove('hidden');
+    // Sync the pill on the congrats screen to current difficulty
+    document.querySelectorAll('.pill[data-pill="congrats"] button').forEach(b => {
+      b.classList.toggle('active', b.dataset.diff === difficulty);
+    });
+    confetti();
+  }
+
+  function confetti() {
+    const colors = ['#ff6b9d', '#ffd93d', '#4ecdc4', '#c780fa', '#ff9f43', '#95e1d3'];
+    for (let i = 0; i < 60; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-30px';
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = (1.8 + Math.random() * 1.6) + 's';
+      c.style.animationDelay = (Math.random() * 0.6) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4500);
+    }
+  }
+
+  // ---- Boot ----
+  loadPuzzles();
+})();
+</script>
+</body>
+</html>

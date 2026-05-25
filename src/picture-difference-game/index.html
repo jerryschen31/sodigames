@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Spot the 5 Differences</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: linear-gradient(180deg, #fef9e7 0%, #fcf3cf 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Comic Sans MS", sans-serif;
+    color: #2c3e50;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header {
+    text-align: center;
+    padding: 12px 16px 8px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: clamp(16px, 3.5vw, 26px);
+    color: #2c3e50;
+    line-height: 1.2;
+  }
+  header .subheader {
+    font-size: clamp(12px, 2.4vw, 16px);
+    color: #5d6d7e;
+    margin-top: 4px;
+  }
+  .counter {
+    display: inline-block;
+    margin-top: 8px;
+    background: #fff;
+    border: 3px solid #f39c12;
+    color: #d35400;
+    font-weight: 800;
+    font-size: clamp(16px, 3vw, 22px);
+    padding: 4px 16px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .counter .found {
+    color: #27ae60;
+    font-size: 1.2em;
+  }
+  main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 8px 8px;
+  }
+  .picture-frame {
+    flex: 1;
+    min-height: 0;
+    background: white;
+    border: 3px solid #34495e;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  }
+  .picture-frame.modified {
+    border-color: #2980b9;
+    cursor: crosshair;
+  }
+  .picture-label {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: clamp(10px, 2vw, 13px);
+    font-weight: 600;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .picture-frame svg {
+    display: block;
+    /* Explicit width/height are set in JS (scene dimensions).
+       CSS then scales them down to fit while preserving aspect ratio. */
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .found-marker {
+    fill: none;
+    stroke: #27ae60;
+    stroke-width: 5;
+    animation: pop 0.4s ease-out;
+    pointer-events: none;
+  }
+  .miss-marker {
+    fill: none;
+    stroke: #e74c3c;
+    stroke-width: 3;
+    animation: missfade 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes pop {
+    0% { stroke-width: 0; opacity: 0; transform-origin: center; }
+    60% { stroke-width: 8; opacity: 1; }
+    100% { stroke-width: 5; opacity: 1; }
+  }
+  @keyframes missfade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #celebration {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 800;
+    text-align: center;
+    padding: 24px;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    transition: opacity 0.2s;
+  }
+  #celebration.hidden { opacity: 0; pointer-events: none; }
+  #celebration h2 {
+    font-size: clamp(28px, 7vw, 56px);
+    color: #ffd93d;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  }
+  #celebration p { font-size: clamp(16px, 3vw, 22px); margin-top: 12px; opacity: 0.9; }
+  .confetti {
+    position: absolute;
+    width: 10px; height: 14px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+  /* Landscape on short screens: keep pictures stacked but tighten header */
+  @media (orientation: landscape) and (max-height: 600px) {
+    header { padding: 4px 12px 2px; }
+    header h1 { font-size: 14px; }
+    header .subheader { font-size: 11px; margin-top: 2px; }
+    .counter { margin-top: 4px; padding: 2px 12px; font-size: 14px; }
+    main { gap: 6px; padding: 2px 6px 6px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Can you spot the 5 differences between the two pictures?</h1>
+    <div class="subheader">Click on the differences in the bottom picture</div>
+    <div class="counter"><span class="found" id="found-count">0</span> / 5</div>
+  </header>
+  <main>
+    <div class="picture-frame reference">
+      <div class="picture-label">Top picture (reference)</div>
+      <div id="ref-container" style="display:contents;"></div>
+    </div>
+    <div class="picture-frame modified">
+      <div class="picture-label">Bottom picture — tap the differences ↓</div>
+      <div id="mod-container" style="display:contents;"></div>
+    </div>
+  </main>
+  <div id="celebration" class="hidden">
+    <h2 id="celebration-title">Great job! 🎉</h2>
+    <p>You found all 5! Next picture coming up…</p>
+  </div>
+
+<script>
+const SCENES = [{"id":"sunny-park","title":"Sunny Park","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":360,"fill":"#87ceeb"},{"id":"grass","type":"rect","x":0,"y":360,"width":800,"height":140,"fill":"#7ec850"},{"id":"sun","type":"circle","cx":680,"cy":90,"r":50,"fill":"#ffd93d"},{"id":"cloud1","type":"ellipse","cx":160,"cy":90,"rx":70,"ry":26,"fill":"#ffffff"},{"id":"cloud2","type":"ellipse","cx":380,"cy":60,"rx":55,"ry":22,"fill":"#ffffff"},{"id":"tree-trunk","type":"rect","x":95,"y":280,"width":32,"height":110,"fill":"#8b4513"},{"id":"tree-leaves","type":"circle","cx":111,"cy":250,"r":65,"fill":"#228b22"},{"id":"bench-seat","type":"rect","x":470,"y":360,"width":160,"height":14,"fill":"#6f4e37"},{"id":"bench-leg1","type":"rect","x":480,"y":374,"width":8,"height":30,"fill":"#6f4e37"},{"id":"bench-leg2","type":"rect","x":612,"y":374,"width":8,"height":30,"fill":"#6f4e37"},{"id":"flower1","type":"circle","cx":240,"cy":430,"r":11,"fill":"#ff69b4"},{"id":"flower2","type":"circle","cx":320,"cy":460,"r":11,"fill":"#ff1493"},{"id":"bird","type":"ellipse","cx":520,"cy":150,"rx":16,"ry":9,"fill":"#333"}],"differences":[{"hint":"Cloud 2 is missing","hitZone":{"cx":380,"cy":60,"r":55},"remove":"cloud2"},{"hint":"Sun is orange","hitZone":{"cx":680,"cy":90,"r":55},"modify":{"id":"sun","fill":"#ff7043"}},{"hint":"Extra flower","hitZone":{"cx":400,"cy":445,"r":22},"add":{"id":"extra-flower","type":"circle","cx":400,"cy":445,"r":11,"fill":"#ff69b4"}},{"hint":"Bird moved right","hitZone":{"cx":600,"cy":150,"r":24},"modify":{"id":"bird","cx":600}},{"hint":"Tree leaves slightly larger","hitZone":{"cx":111,"cy":250,"r":72},"modify":{"id":"tree-leaves","r":72}}]},{"id":"beach-day","title":"Beach Day","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":260,"fill":"#b3e0ff"},{"id":"sea","type":"rect","x":0,"y":260,"width":800,"height":120,"fill":"#4fc3f7"},{"id":"sand","type":"rect","x":0,"y":380,"width":800,"height":120,"fill":"#f9e0a4"},{"id":"sun","type":"circle","cx":120,"cy":110,"r":45,"fill":"#ffd93d"},{"id":"palm-trunk","type":"rect","x":660,"y":230,"width":18,"height":170,"fill":"#7a4e1f"},{"id":"palm-leaf1","type":"ellipse","cx":640,"cy":220,"rx":50,"ry":15,"fill":"#2e8b57"},{"id":"palm-leaf2","type":"ellipse","cx":700,"cy":215,"rx":50,"ry":15,"fill":"#2e8b57"},{"id":"palm-leaf3","type":"ellipse","cx":670,"cy":195,"rx":12,"ry":45,"fill":"#2e8b57"},{"id":"ball","type":"circle","cx":280,"cy":430,"r":28,"fill":"#e74c3c"},{"id":"umbrella","type":"polygon","points":"450,420 380,360 520,360","fill":"#3498db"},{"id":"umbrella-pole","type":"rect","x":448,"y":360,"width":4,"height":70,"fill":"#5d4037"},{"id":"boat-hull","type":"polygon","points":"100,300 200,300 185,330 115,330","fill":"#8b4513"},{"id":"boat-sail","type":"polygon","points":"150,300 150,250 195,300","fill":"#ffffff"}],"differences":[{"hint":"Ball is blue","hitZone":{"cx":280,"cy":430,"r":34},"modify":{"id":"ball","fill":"#2196f3"}},{"hint":"Boat is missing","hitZone":{"cx":155,"cy":310,"r":60},"remove":"boat-hull"},{"hint":"Boat sail is also missing","hitZone":{"cx":170,"cy":275,"r":30},"remove":"boat-sail"},{"hint":"Extra seagull added","hitZone":{"cx":420,"cy":130,"r":25},"add":{"id":"seagull","type":"path","d":"M 400 130 Q 410 118 420 130 Q 430 118 440 130","fill":"none","stroke":"#333","stroke-width":3}},{"hint":"Palm trunk slightly taller","hitZone":{"cx":669,"cy":250,"r":30},"modify":{"id":"palm-trunk","y":215,"height":185}}]},{"id":"night-sky","title":"Night Sky","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":400,"fill":"#0d1b3e"},{"id":"ground","type":"rect","x":0,"y":400,"width":800,"height":100,"fill":"#1a1a2e"},{"id":"mountain1","type":"polygon","points":"0,400 200,250 400,400","fill":"#34495e"},{"id":"mountain2","type":"polygon","points":"350,400 550,280 750,400","fill":"#2c3e50"},{"id":"moon","type":"circle","cx":650,"cy":110,"r":50,"fill":"#fff8dc"},{"id":"star1","type":"polygon","points":"100,80 105,95 120,95 108,105 113,120 100,111 87,120 92,105 80,95 95,95","fill":"#fff"},{"id":"star2","type":"polygon","points":"250,140 254,150 264,150 256,156 260,166 250,160 240,166 244,156 236,150 246,150","fill":"#fff"},{"id":"star3","type":"polygon","points":"450,70 454,80 464,80 456,86 460,96 450,90 440,96 444,86 436,80 446,80","fill":"#fff"},{"id":"star4","type":"polygon","points":"350,190 354,200 364,200 356,206 360,216 350,210 340,216 344,206 336,200 346,200","fill":"#fff"},{"id":"owl","type":"ellipse","cx":180,"cy":360,"rx":22,"ry":28,"fill":"#6f4e37"},{"id":"owl-eye-l","type":"circle","cx":172,"cy":352,"r":5,"fill":"#ffd93d"},{"id":"owl-eye-r","type":"circle","cx":188,"cy":352,"r":5,"fill":"#ffd93d"}],"differences":[{"hint":"Moon color (warmer)","hitZone":{"cx":650,"cy":110,"r":55},"modify":{"id":"moon","fill":"#ffb347"}},{"hint":"Star 2 missing","hitZone":{"cx":250,"cy":158,"r":30},"remove":"star2"},{"hint":"Extra star","hitZone":{"cx":580,"cy":200,"r":25},"add":{"id":"extra-star","type":"polygon","points":"580,190 584,200 594,200 586,206 590,216 580,210 570,216 574,206 566,200 576,200","fill":"#fff"}},{"hint":"Mountain 1 peak shifted","hitZone":{"cx":200,"cy":270,"r":40},"modify":{"id":"mountain1","points":"0,400 240,250 400,400"}},{"hint":"Owl right eye color","hitZone":{"cx":188,"cy":352,"r":14},"modify":{"id":"owl-eye-r","fill":"#e74c3c"}}]},{"id":"kitchen-counter","title":"Kitchen Counter","width":800,"height":500,"elements":[{"id":"wall","type":"rect","x":0,"y":0,"width":800,"height":340,"fill":"#ffe4c4"},{"id":"counter","type":"rect","x":0,"y":340,"width":800,"height":160,"fill":"#d2b48c"},{"id":"counter-edge","type":"rect","x":0,"y":340,"width":800,"height":8,"fill":"#a0826d"},{"id":"window-frame","type":"rect","x":80,"y":60,"width":200,"height":160,"fill":"#8b4513"},{"id":"window-sky","type":"rect","x":90,"y":70,"width":180,"height":140,"fill":"#87ceeb"},{"id":"window-cross-v","type":"rect","x":178,"y":70,"width":4,"height":140,"fill":"#8b4513"},{"id":"window-cross-h","type":"rect","x":90,"y":138,"width":180,"height":4,"fill":"#8b4513"},{"id":"plate","type":"ellipse","cx":470,"cy":410,"rx":95,"ry":22,"fill":"#ecf0f1"},{"id":"apple","type":"circle","cx":440,"cy":395,"r":22,"fill":"#e74c3c"},{"id":"apple-stem","type":"rect","x":438,"y":365,"width":4,"height":10,"fill":"#6f4e37"},{"id":"banana","type":"path","d":"M 480 395 Q 510 370 540 395 Q 530 405 480 405 Z","fill":"#f1c40f"},{"id":"cup","type":"rect","x":620,"y":380,"width":50,"height":60,"fill":"#3498db","rx":4},{"id":"cup-handle","type":"path","d":"M 670 390 Q 690 400 670 425","fill":"none","stroke":"#3498db","stroke-width":6},{"id":"fork","type":"rect","x":290,"y":400,"width":6,"height":50,"fill":"#7f8c8d"}],"differences":[{"hint":"Apple is green","hitZone":{"cx":440,"cy":395,"r":28},"modify":{"id":"apple","fill":"#7cb342"}},{"hint":"Fork is gone","hitZone":{"cx":293,"cy":425,"r":30},"remove":"fork"},{"hint":"Cup has no handle","hitZone":{"cx":685,"cy":408,"r":25},"remove":"cup-handle"},{"hint":"Extra orange added","hitZone":{"cx":380,"cy":405,"r":25},"add":{"id":"orange","type":"circle","cx":380,"cy":405,"r":18,"fill":"#ff8c00"}},{"hint":"Plate slightly narrower","hitZone":{"cx":470,"cy":422,"r":28},"modify":{"id":"plate","rx":85}}]},{"id":"cozy-bedroom","title":"Cozy Bedroom","width":800,"height":500,"elements":[{"id":"wall","type":"rect","x":0,"y":0,"width":800,"height":360,"fill":"#fad7a0"},{"id":"floor","type":"rect","x":0,"y":360,"width":800,"height":140,"fill":"#8b6f47"},{"id":"window","type":"rect","x":80,"y":80,"width":140,"height":130,"fill":"#aed6f1"},{"id":"window-frame","type":"rect","x":75,"y":75,"width":150,"height":140,"fill":"none","stroke":"#5d4037","stroke-width":6},{"id":"bed-base","type":"rect","x":340,"y":280,"width":380,"height":100,"fill":"#8b4513"},{"id":"mattress","type":"rect","x":350,"y":250,"width":360,"height":50,"fill":"#ffffff"},{"id":"pillow","type":"rect","x":360,"y":230,"width":100,"height":30,"fill":"#ff9999","rx":6},{"id":"blanket","type":"rect","x":480,"y":270,"width":230,"height":30,"fill":"#9b59b6"},{"id":"lamp-stand","type":"rect","x":247,"y":230,"width":6,"height":50,"fill":"#5d4037"},{"id":"lamp-base","type":"rect","x":230,"y":270,"width":40,"height":16,"fill":"#5d4037"},{"id":"lamp-shade","type":"polygon","points":"230,230 270,230 280,200 220,200","fill":"#f1c40f"},{"id":"teddy-body","type":"circle","cx":130,"cy":410,"r":30,"fill":"#a0522d"},{"id":"teddy-head","type":"circle","cx":130,"cy":370,"r":22,"fill":"#a0522d"}],"differences":[{"hint":"Lamp shade is blue","hitZone":{"cx":250,"cy":215,"r":38},"modify":{"id":"lamp-shade","fill":"#5dade2"}},{"hint":"Teddy is gone","hitZone":{"cx":130,"cy":395,"r":50},"remove":"teddy-body"},{"hint":"Teddy head also gone","hitZone":{"cx":130,"cy":370,"r":28},"remove":"teddy-head"},{"hint":"Picture added to wall","hitZone":{"cx":560,"cy":130,"r":45},"add":{"id":"picture","type":"rect","x":520,"y":95,"width":80,"height":70,"fill":"#ffffff","stroke":"#5d4037","stroke-width":5}},{"hint":"Pillow shifted slightly","hitZone":{"cx":410,"cy":245,"r":30},"modify":{"id":"pillow","x":380}}]},{"id":"happy-farm","title":"Happy Farm","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":350,"fill":"#87ceeb"},{"id":"ground","type":"rect","x":0,"y":350,"width":800,"height":150,"fill":"#8bc34a"},{"id":"sun","type":"circle","cx":100,"cy":90,"r":42,"fill":"#ffd93d"},{"id":"barn-wall","type":"rect","x":480,"y":200,"width":220,"height":180,"fill":"#c0392b"},{"id":"barn-roof","type":"polygon","points":"470,200 590,130 710,200","fill":"#7b241c"},{"id":"barn-door","type":"rect","x":560,"y":280,"width":60,"height":100,"fill":"#5d4037"},{"id":"barn-window","type":"rect","x":510,"y":230,"width":30,"height":30,"fill":"#fff8dc"},{"id":"cow-body","type":"ellipse","cx":220,"cy":380,"rx":60,"ry":32,"fill":"#ffffff"},{"id":"cow-head","type":"circle","cx":285,"cy":365,"r":22,"fill":"#ffffff"},{"id":"cow-spot1","type":"ellipse","cx":200,"cy":370,"rx":14,"ry":9,"fill":"#222"},{"id":"cow-spot2","type":"ellipse","cx":245,"cy":390,"rx":11,"ry":8,"fill":"#222"},{"id":"cow-leg1","type":"rect","x":185,"y":405,"width":8,"height":25,"fill":"#222"},{"id":"cow-leg2","type":"rect","x":255,"y":405,"width":8,"height":25,"fill":"#222"},{"id":"fence1","type":"rect","x":50,"y":430,"width":6,"height":40,"fill":"#8b4513"},{"id":"fence2","type":"rect","x":100,"y":430,"width":6,"height":40,"fill":"#8b4513"},{"id":"fence-rail","type":"rect","x":30,"y":440,"width":100,"height":5,"fill":"#8b4513"}],"differences":[{"hint":"Barn roof is blue","hitZone":{"cx":590,"cy":165,"r":60},"modify":{"id":"barn-roof","fill":"#2c3e50"}},{"hint":"Cow spot 2 gone","hitZone":{"cx":245,"cy":390,"r":20},"remove":"cow-spot2"},{"hint":"Chicken added","hitZone":{"cx":400,"cy":415,"r":22},"add":{"id":"chicken","type":"ellipse","cx":400,"cy":415,"r":16,"rx":16,"ry":12,"fill":"#fff"}},{"hint":"Sun moved right","hitZone":{"cx":160,"cy":90,"r":50},"modify":{"id":"sun","cx":160}},{"hint":"Barn window slightly larger","hitZone":{"cx":525,"cy":245,"r":25},"modify":{"id":"barn-window","width":38,"height":38}}]},{"id":"underwater","title":"Underwater World","width":800,"height":500,"elements":[{"id":"water","type":"rect","x":0,"y":0,"width":800,"height":500,"fill":"#1abc9c"},{"id":"seabed","type":"rect","x":0,"y":430,"width":800,"height":70,"fill":"#d6cb8a"},{"id":"fish1-body","type":"ellipse","cx":250,"cy":200,"rx":40,"ry":22,"fill":"#ff7043"},{"id":"fish1-tail","type":"polygon","points":"210,200 180,180 180,220","fill":"#ff7043"},{"id":"fish1-eye","type":"circle","cx":270,"cy":195,"r":4,"fill":"#000"},{"id":"fish2-body","type":"ellipse","cx":560,"cy":300,"rx":35,"ry":18,"fill":"#f39c12"},{"id":"fish2-tail","type":"polygon","points":"595,300 620,285 620,315","fill":"#f39c12"},{"id":"seaweed1","type":"path","d":"M 100 430 Q 90 380 100 350 Q 110 320 100 280","fill":"none","stroke":"#16a085","stroke-width":12},{"id":"seaweed2","type":"path","d":"M 700 430 Q 690 380 700 350 Q 710 320 700 290","fill":"none","stroke":"#16a085","stroke-width":12},{"id":"bubble1","type":"circle","cx":400,"cy":120,"r":10,"fill":"#ffffff","fill-opacity":0.6},{"id":"bubble2","type":"circle","cx":420,"cy":80,"r":7,"fill":"#ffffff","fill-opacity":0.6},{"id":"bubble3","type":"circle","cx":380,"cy":60,"r":5,"fill":"#ffffff","fill-opacity":0.6},{"id":"chest","type":"rect","x":350,"y":400,"width":80,"height":40,"fill":"#8b4513"},{"id":"chest-lid","type":"rect","x":350,"y":385,"width":80,"height":20,"fill":"#a0522d"}],"differences":[{"hint":"Fish 1 is purple","hitZone":{"cx":250,"cy":200,"r":45},"modify":{"id":"fish1-body","fill":"#9b59b6"}},{"hint":"Bubble 2 is gone","hitZone":{"cx":420,"cy":80,"r":18},"remove":"bubble2"},{"hint":"Starfish added","hitZone":{"cx":550,"cy":430,"r":25},"add":{"id":"starfish","type":"polygon","points":"550,415 555,425 565,425 558,432 561,442 550,436 539,442 542,432 535,425 545,425","fill":"#ff5252"}},{"hint":"Fish 1 tail also changed","hitZone":{"cx":195,"cy":200,"r":25},"modify":{"id":"fish1-tail","fill":"#9b59b6"}},{"hint":"Chest lid color slightly lighter","hitZone":{"cx":390,"cy":395,"r":25},"modify":{"id":"chest-lid","fill":"#cd853f"}}]},{"id":"birthday","title":"Birthday Party","width":800,"height":500,"elements":[{"id":"wall","type":"rect","x":0,"y":0,"width":800,"height":380,"fill":"#fff3e0"},{"id":"table","type":"rect","x":0,"y":380,"width":800,"height":120,"fill":"#a0522d"},{"id":"cake-base","type":"rect","x":320,"y":300,"width":160,"height":80,"fill":"#f8bbd0"},{"id":"cake-top","type":"rect","x":350,"y":240,"width":100,"height":60,"fill":"#ffffff"},{"id":"candle1","type":"rect","x":370,"y":215,"width":6,"height":25,"fill":"#e74c3c"},{"id":"candle2","type":"rect","x":397,"y":215,"width":6,"height":25,"fill":"#2980b9"},{"id":"candle3","type":"rect","x":424,"y":215,"width":6,"height":25,"fill":"#27ae60"},{"id":"flame1","type":"ellipse","cx":373,"cy":207,"rx":4,"ry":8,"fill":"#ffd93d"},{"id":"flame2","type":"ellipse","cx":400,"cy":207,"rx":4,"ry":8,"fill":"#ffd93d"},{"id":"flame3","type":"ellipse","cx":427,"cy":207,"rx":4,"ry":8,"fill":"#ffd93d"},{"id":"balloon1","type":"ellipse","cx":130,"cy":130,"rx":28,"ry":36,"fill":"#e74c3c"},{"id":"balloon1-string","type":"line","x1":130,"y1":166,"x2":130,"y2":260,"stroke":"#888","stroke-width":2},{"id":"balloon2","type":"ellipse","cx":680,"cy":120,"rx":28,"ry":36,"fill":"#2980b9"},{"id":"balloon2-string","type":"line","x1":680,"y1":156,"x2":680,"y2":250,"stroke":"#888","stroke-width":2},{"id":"balloon3","type":"ellipse","cx":200,"cy":90,"rx":24,"ry":30,"fill":"#27ae60"},{"id":"balloon3-string","type":"line","x1":200,"y1":120,"x2":200,"y2":220,"stroke":"#888","stroke-width":2}],"differences":[{"hint":"Right balloon is purple","hitZone":{"cx":680,"cy":120,"r":40},"modify":{"id":"balloon2","fill":"#9b59b6"}},{"hint":"Middle candle gone","hitZone":{"cx":400,"cy":225,"r":22},"remove":"candle2"},{"hint":"Middle flame also gone","hitZone":{"cx":400,"cy":207,"r":16},"remove":"flame2"},{"hint":"Gift box added","hitZone":{"cx":580,"cy":430,"r":38},"add":{"id":"gift","type":"rect","x":545,"y":400,"width":70,"height":60,"fill":"#e91e63"}},{"hint":"Cake top slightly yellow","hitZone":{"cx":400,"cy":270,"r":35},"modify":{"id":"cake-top","fill":"#fff59d"}}]},{"id":"snowman","title":"Snowman Day","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":380,"fill":"#cfe2f3"},{"id":"snow","type":"rect","x":0,"y":380,"width":800,"height":120,"fill":"#ffffff"},{"id":"tree","type":"polygon","points":"120,400 80,310 100,310 70,250 105,250 75,200 145,200 115,250 150,250 120,310 140,310","fill":"#2e7d32"},{"id":"tree-trunk","type":"rect","x":105,"y":395,"width":12,"height":14,"fill":"#5d4037"},{"id":"snowman-bottom","type":"circle","cx":480,"cy":380,"r":70,"fill":"#ffffff","stroke":"#bbb","stroke-width":2},{"id":"snowman-middle","type":"circle","cx":480,"cy":280,"r":55,"fill":"#ffffff","stroke":"#bbb","stroke-width":2},{"id":"snowman-head","type":"circle","cx":480,"cy":195,"r":42,"fill":"#ffffff","stroke":"#bbb","stroke-width":2},{"id":"eye-l","type":"circle","cx":467,"cy":188,"r":4,"fill":"#000"},{"id":"eye-r","type":"circle","cx":493,"cy":188,"r":4,"fill":"#000"},{"id":"nose","type":"polygon","points":"480,200 480,210 510,205","fill":"#ff8c00"},{"id":"button1","type":"circle","cx":480,"cy":265,"r":5,"fill":"#000"},{"id":"button2","type":"circle","cx":480,"cy":290,"r":5,"fill":"#000"},{"id":"button3","type":"circle","cx":480,"cy":315,"r":5,"fill":"#000"},{"id":"hat-brim","type":"rect","x":440,"y":152,"width":80,"height":8,"fill":"#222"},{"id":"hat-top","type":"rect","x":455,"y":110,"width":50,"height":42,"fill":"#222"},{"id":"scarf","type":"rect","x":442,"y":232,"width":76,"height":18,"fill":"#c0392b"},{"id":"snowflake1","type":"circle","cx":200,"cy":120,"r":4,"fill":"#ffffff"},{"id":"snowflake2","type":"circle","cx":320,"cy":70,"r":4,"fill":"#ffffff"},{"id":"snowflake3","type":"circle","cx":650,"cy":100,"r":4,"fill":"#ffffff"}],"differences":[{"hint":"Hat top is red","hitZone":{"cx":480,"cy":130,"r":35},"modify":{"id":"hat-top","fill":"#c0392b"}},{"hint":"Middle button missing","hitZone":{"cx":480,"cy":290,"r":14},"remove":"button2"},{"hint":"Extra snowflake","hitZone":{"cx":450,"cy":80,"r":16},"add":{"id":"extra-flake","type":"circle","cx":450,"cy":80,"r":5,"fill":"#ffffff"}},{"hint":"Scarf is blue","hitZone":{"cx":480,"cy":241,"r":25},"modify":{"id":"scarf","fill":"#2980b9"}},{"hint":"Carrot nose slightly longer","hitZone":{"cx":500,"cy":205,"r":18},"modify":{"id":"nose","points":"480,200 480,210 520,206"}}]},{"id":"rocket","title":"Rocket Launch","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":420,"fill":"#0c1b3a"},{"id":"ground","type":"rect","x":0,"y":420,"width":800,"height":80,"fill":"#3e2723"},{"id":"moon","type":"circle","cx":130,"cy":110,"r":40,"fill":"#f8f4e3"},{"id":"star1","type":"circle","cx":250,"cy":80,"r":3,"fill":"#ffffff"},{"id":"star2","type":"circle","cx":350,"cy":140,"r":3,"fill":"#ffffff"},{"id":"star3","type":"circle","cx":600,"cy":90,"r":3,"fill":"#ffffff"},{"id":"star4","type":"circle","cx":700,"cy":200,"r":3,"fill":"#ffffff"},{"id":"rocket-body","type":"rect","x":360,"y":200,"width":80,"height":180,"fill":"#ecf0f1"},{"id":"rocket-tip","type":"polygon","points":"360,200 440,200 400,130","fill":"#e74c3c"},{"id":"rocket-window","type":"circle","cx":400,"cy":250,"r":18,"fill":"#3498db"},{"id":"rocket-fin-l","type":"polygon","points":"360,330 360,380 320,380","fill":"#e74c3c"},{"id":"rocket-fin-r","type":"polygon","points":"440,330 440,380 480,380","fill":"#e74c3c"},{"id":"flame1","type":"polygon","points":"370,380 430,380 400,440","fill":"#ff9800"},{"id":"flame2","type":"polygon","points":"385,380 415,380 400,420","fill":"#ffeb3b"}],"differences":[{"hint":"Rocket tip is blue","hitZone":{"cx":400,"cy":170,"r":40},"modify":{"id":"rocket-tip","fill":"#2980b9"}},{"hint":"Star 3 missing","hitZone":{"cx":600,"cy":90,"r":18},"remove":"star3"},{"hint":"Planet added","hitZone":{"cx":680,"cy":320,"r":38},"add":{"id":"planet","type":"circle","cx":680,"cy":320,"r":30,"fill":"#c780fa"}},{"hint":"Outer flame larger","hitZone":{"cx":400,"cy":410,"r":35},"modify":{"id":"flame1","points":"360,380 440,380 400,470"}},{"hint":"Rocket window slightly bigger","hitZone":{"cx":400,"cy":250,"r":22},"modify":{"id":"rocket-window","r":21}}]},{"id":"pizza","title":"Pizza Time","width":800,"height":500,"elements":[{"id":"table","type":"rect","x":0,"y":0,"width":800,"height":500,"fill":"#8d6e63"},{"id":"plate","type":"circle","cx":400,"cy":250,"r":210,"fill":"#fafafa"},{"id":"crust","type":"circle","cx":400,"cy":250,"r":180,"fill":"#d4a373"},{"id":"sauce","type":"circle","cx":400,"cy":250,"r":160,"fill":"#c62828"},{"id":"cheese","type":"circle","cx":400,"cy":250,"r":155,"fill":"#fff59d","fill-opacity":0.7},{"id":"pep1","type":"circle","cx":330,"cy":200,"r":18,"fill":"#b71c1c"},{"id":"pep2","type":"circle","cx":470,"cy":200,"r":18,"fill":"#b71c1c"},{"id":"pep3","type":"circle","cx":330,"cy":300,"r":18,"fill":"#b71c1c"},{"id":"pep4","type":"circle","cx":470,"cy":300,"r":18,"fill":"#b71c1c"},{"id":"pep5","type":"circle","cx":400,"cy":160,"r":18,"fill":"#b71c1c"},{"id":"pep6","type":"circle","cx":400,"cy":340,"r":18,"fill":"#b71c1c"},{"id":"basil1","type":"ellipse","cx":380,"cy":240,"rx":8,"ry":5,"fill":"#2e7d32"},{"id":"basil2","type":"ellipse","cx":430,"cy":260,"rx":8,"ry":5,"fill":"#2e7d32"},{"id":"olive1","type":"circle","cx":360,"cy":250,"r":6,"fill":"#1b1b1b"},{"id":"olive2","type":"circle","cx":440,"cy":240,"r":6,"fill":"#1b1b1b"}],"differences":[{"hint":"Pepperoni 2 gone","hitZone":{"cx":470,"cy":200,"r":24},"remove":"pep2"},{"hint":"Pepperoni 5 is yellow (pineapple!)","hitZone":{"cx":400,"cy":160,"r":24},"modify":{"id":"pep5","fill":"#ffd54f"}},{"hint":"Extra olive","hitZone":{"cx":400,"cy":280,"r":14},"add":{"id":"extra-olive","type":"circle","cx":400,"cy":280,"r":6,"fill":"#1b1b1b"}},{"hint":"Basil 1 slightly bigger","hitZone":{"cx":380,"cy":240,"r":16},"modify":{"id":"basil1","rx":11,"ry":7}},{"hint":"Crust slightly darker","hitZone":{"cx":400,"cy":60,"r":30},"modify":{"id":"crust","fill":"#a07242"}}]},{"id":"house","title":"Cozy House","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":380,"fill":"#b3e5fc"},{"id":"ground","type":"rect","x":0,"y":380,"width":800,"height":120,"fill":"#81c784"},{"id":"sun","type":"circle","cx":700,"cy":80,"r":38,"fill":"#ffd93d"},{"id":"house-wall","type":"rect","x":250,"y":250,"width":300,"height":180,"fill":"#fff9c4"},{"id":"roof","type":"polygon","points":"230,250 570,250 400,160","fill":"#c62828"},{"id":"door","type":"rect","x":370,"y":340,"width":60,"height":90,"fill":"#5d4037"},{"id":"door-knob","type":"circle","cx":418,"cy":385,"r":3,"fill":"#ffd93d"},{"id":"window-l","type":"rect","x":285,"y":295,"width":50,"height":50,"fill":"#aed6f1","stroke":"#5d4037","stroke-width":4},{"id":"window-r","type":"rect","x":465,"y":295,"width":50,"height":50,"fill":"#aed6f1","stroke":"#5d4037","stroke-width":4},{"id":"chimney","type":"rect","x":470,"y":175,"width":25,"height":50,"fill":"#8b4513"},{"id":"smoke","type":"circle","cx":482,"cy":155,"r":12,"fill":"#bdbdbd","fill-opacity":0.7},{"id":"tree-trunk","type":"rect","x":100,"y":320,"width":22,"height":90,"fill":"#6f4e37"},{"id":"tree-leaves","type":"circle","cx":111,"cy":305,"r":50,"fill":"#2e7d32"}],"differences":[{"hint":"Door is blue","hitZone":{"cx":400,"cy":385,"r":50},"modify":{"id":"door","fill":"#1976d2"}},{"hint":"Right window gone","hitZone":{"cx":490,"cy":320,"r":35},"remove":"window-r"},{"hint":"Extra cloud","hitZone":{"cx":200,"cy":100,"r":35},"add":{"id":"extra-cloud","type":"ellipse","cx":200,"cy":100,"rx":50,"ry":18,"fill":"#ffffff"}},{"hint":"Roof slightly lower / wider peak","hitZone":{"cx":400,"cy":180,"r":35},"modify":{"id":"roof","points":"230,250 570,250 400,180"}},{"hint":"Tree leaves a touch lighter","hitZone":{"cx":111,"cy":305,"r":55},"modify":{"id":"tree-leaves","fill":"#4caf50"}}]},{"id":"pirate-ship","title":"Pirate Ship","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":320,"fill":"#90caf9"},{"id":"sea","type":"rect","x":0,"y":320,"width":800,"height":180,"fill":"#1565c0"},{"id":"sun","type":"circle","cx":90,"cy":90,"r":38,"fill":"#ffd93d"},{"id":"cloud1","type":"ellipse","cx":320,"cy":80,"rx":55,"ry":18,"fill":"#ffffff"},{"id":"cloud2","type":"ellipse","cx":620,"cy":120,"rx":45,"ry":16,"fill":"#ffffff"},{"id":"ship-hull","type":"polygon","points":"260,360 540,360 510,420 290,420","fill":"#5d4037"},{"id":"ship-deck","type":"rect","x":260,"y":350,"width":280,"height":12,"fill":"#8b4513"},{"id":"mast","type":"rect","x":393,"y":180,"width":8,"height":175,"fill":"#5d4037"},{"id":"sail","type":"polygon","points":"400,200 480,250 400,330","fill":"#ffffff"},{"id":"flag","type":"rect","x":397,"y":175,"width":70,"height":30,"fill":"#1b1b1b"},{"id":"skull","type":"circle","cx":425,"cy":190,"r":9,"fill":"#fff"},{"id":"porthole1","type":"circle","cx":320,"cy":385,"r":10,"fill":"#ffd93d"},{"id":"porthole2","type":"circle","cx":380,"cy":385,"r":10,"fill":"#ffd93d"},{"id":"porthole3","type":"circle","cx":440,"cy":385,"r":10,"fill":"#ffd93d"}],"differences":[{"hint":"Flag is red","hitZone":{"cx":430,"cy":190,"r":35},"modify":{"id":"flag","fill":"#c62828"}},{"hint":"Cloud 1 gone","hitZone":{"cx":320,"cy":80,"r":55},"remove":"cloud1"},{"hint":"Bird added","hitZone":{"cx":220,"cy":150,"r":25},"add":{"id":"bird","type":"path","d":"M 200 150 Q 210 140 220 150 Q 230 140 240 150","fill":"none","stroke":"#222","stroke-width":3}},{"hint":"Porthole 3 missing","hitZone":{"cx":440,"cy":385,"r":16},"remove":"porthole3"},{"hint":"Sail slightly wider","hitZone":{"cx":460,"cy":265,"r":25},"modify":{"id":"sail","points":"400,200 500,255 400,330"}}]},{"id":"garden","title":"Flower Garden","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":320,"fill":"#b3e5fc"},{"id":"grass","type":"rect","x":0,"y":320,"width":800,"height":180,"fill":"#66bb6a"},{"id":"sun","type":"circle","cx":720,"cy":80,"r":42,"fill":"#ffd93d"},{"id":"stem1","type":"rect","x":158,"y":340,"width":4,"height":100,"fill":"#2e7d32"},{"id":"flower1","type":"circle","cx":160,"cy":340,"r":20,"fill":"#e91e63"},{"id":"flower1-core","type":"circle","cx":160,"cy":340,"r":7,"fill":"#fff59d"},{"id":"stem2","type":"rect","x":298,"y":360,"width":4,"height":90,"fill":"#2e7d32"},{"id":"flower2","type":"circle","cx":300,"cy":360,"r":22,"fill":"#fb8c00"},{"id":"flower2-core","type":"circle","cx":300,"cy":360,"r":7,"fill":"#5d4037"},{"id":"stem3","type":"rect","x":438,"y":350,"width":4,"height":100,"fill":"#2e7d32"},{"id":"flower3","type":"circle","cx":440,"cy":350,"r":20,"fill":"#ab47bc"},{"id":"flower3-core","type":"circle","cx":440,"cy":350,"r":7,"fill":"#fff59d"},{"id":"stem4","type":"rect","x":578,"y":365,"width":4,"height":90,"fill":"#2e7d32"},{"id":"flower4","type":"circle","cx":580,"cy":365,"r":20,"fill":"#42a5f5"},{"id":"flower4-core","type":"circle","cx":580,"cy":365,"r":7,"fill":"#fff59d"},{"id":"butterfly","type":"ellipse","cx":380,"cy":200,"rx":18,"ry":12,"fill":"#ff7043"},{"id":"bee","type":"ellipse","cx":240,"cy":250,"rx":11,"ry":7,"fill":"#fdd835"}],"differences":[{"hint":"Flower 2 is red","hitZone":{"cx":300,"cy":360,"r":28},"modify":{"id":"flower2","fill":"#e53935"}},{"hint":"Flower 4 missing","hitZone":{"cx":580,"cy":365,"r":28},"remove":"flower4"},{"hint":"Flower 4 core also missing","hitZone":{"cx":580,"cy":365,"r":14},"remove":"flower4-core"},{"hint":"Extra butterfly","hitZone":{"cx":500,"cy":160,"r":24},"add":{"id":"butterfly2","type":"ellipse","cx":500,"cy":160,"rx":14,"ry":10,"fill":"#9c27b0"}},{"hint":"Bee slightly bigger","hitZone":{"cx":240,"cy":250,"r":18},"modify":{"id":"bee","rx":14,"ry":9}}]},{"id":"race-car","title":"Race Car","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":280,"fill":"#90caf9"},{"id":"track","type":"rect","x":0,"y":280,"width":800,"height":220,"fill":"#424242"},{"id":"stripe1","type":"rect","x":40,"y":380,"width":80,"height":10,"fill":"#fff59d"},{"id":"stripe2","type":"rect","x":220,"y":380,"width":80,"height":10,"fill":"#fff59d"},{"id":"stripe3","type":"rect","x":400,"y":380,"width":80,"height":10,"fill":"#fff59d"},{"id":"stripe4","type":"rect","x":580,"y":380,"width":80,"height":10,"fill":"#fff59d"},{"id":"car-body","type":"rect","x":280,"y":290,"width":240,"height":70,"fill":"#e53935","rx":14},{"id":"car-top","type":"polygon","points":"320,290 480,290 460,250 340,250","fill":"#e53935"},{"id":"window","type":"polygon","points":"335,285 470,285 455,255 350,255","fill":"#b3e5fc"},{"id":"wheel-l","type":"circle","cx":330,"cy":365,"r":26,"fill":"#1b1b1b"},{"id":"wheel-r","type":"circle","cx":470,"cy":365,"r":26,"fill":"#1b1b1b"},{"id":"wheel-l-hub","type":"circle","cx":330,"cy":365,"r":10,"fill":"#bdbdbd"},{"id":"wheel-r-hub","type":"circle","cx":470,"cy":365,"r":10,"fill":"#bdbdbd"},{"id":"number","type":"text","x":400,"y":332,"text-anchor":"middle","font-size":32,"font-weight":"bold","fill":"#ffffff","text":"7"}],"differences":[{"hint":"Car is blue","hitZone":{"cx":400,"cy":325,"r":80},"modify":{"id":"car-body","fill":"#1976d2"}},{"hint":"Car top color too","hitZone":{"cx":400,"cy":270,"r":60},"modify":{"id":"car-top","fill":"#1976d2"}},{"hint":"Stripe 3 missing","hitZone":{"cx":440,"cy":385,"r":35},"remove":"stripe3"},{"hint":"Number changed","hitZone":{"cx":400,"cy":320,"r":28},"modify":{"id":"number","text":"3"}},{"hint":"Left wheel hub bigger","hitZone":{"cx":330,"cy":365,"r":18},"modify":{"id":"wheel-l-hub","r":14}}]},{"id":"robot","title":"Friendly Robot","width":800,"height":500,"elements":[{"id":"bg","type":"rect","x":0,"y":0,"width":800,"height":500,"fill":"#e1f5fe"},{"id":"floor","type":"rect","x":0,"y":420,"width":800,"height":80,"fill":"#90a4ae"},{"id":"body","type":"rect","x":320,"y":220,"width":160,"height":180,"fill":"#90a4ae","rx":10},{"id":"head","type":"rect","x":340,"y":100,"width":120,"height":110,"fill":"#cfd8dc","rx":14},{"id":"antenna-stem","type":"rect","x":397,"y":60,"width":6,"height":40,"fill":"#5d4037"},{"id":"antenna-ball","type":"circle","cx":400,"cy":55,"r":10,"fill":"#e53935"},{"id":"eye-l","type":"circle","cx":370,"cy":145,"r":12,"fill":"#1976d2"},{"id":"eye-r","type":"circle","cx":430,"cy":145,"r":12,"fill":"#1976d2"},{"id":"mouth","type":"rect","x":365,"y":175,"width":70,"height":12,"fill":"#212121","rx":4},{"id":"btn1","type":"circle","cx":360,"cy":270,"r":12,"fill":"#fbc02d"},{"id":"btn2","type":"circle","cx":400,"cy":270,"r":12,"fill":"#43a047"},{"id":"btn3","type":"circle","cx":440,"cy":270,"r":12,"fill":"#e53935"},{"id":"arm-l","type":"rect","x":280,"y":240,"width":40,"height":110,"fill":"#78909c","rx":8},{"id":"arm-r","type":"rect","x":480,"y":240,"width":40,"height":110,"fill":"#78909c","rx":8},{"id":"leg-l","type":"rect","x":340,"y":400,"width":40,"height":30,"fill":"#78909c"},{"id":"leg-r","type":"rect","x":420,"y":400,"width":40,"height":30,"fill":"#78909c"}],"differences":[{"hint":"Antenna ball is blue","hitZone":{"cx":400,"cy":55,"r":18},"modify":{"id":"antenna-ball","fill":"#1976d2"}},{"hint":"Middle button gone","hitZone":{"cx":400,"cy":270,"r":20},"remove":"btn2"},{"hint":"Extra button on body","hitZone":{"cx":400,"cy":330,"r":18},"add":{"id":"btn4","type":"circle","cx":400,"cy":330,"r":12,"fill":"#7e57c2"}},{"hint":"Right eye is red","hitZone":{"cx":430,"cy":145,"r":18},"modify":{"id":"eye-r","fill":"#e53935"}},{"hint":"Mouth slightly shorter","hitZone":{"cx":400,"cy":181,"r":22},"modify":{"id":"mouth","x":375,"width":50}}]},{"id":"aquarium","title":"Home Aquarium","width":800,"height":500,"elements":[{"id":"table","type":"rect","x":0,"y":430,"width":800,"height":70,"fill":"#8d6e63"},{"id":"tank-water","type":"rect","x":80,"y":70,"width":640,"height":360,"fill":"#4dd0e1"},{"id":"gravel","type":"rect","x":80,"y":380,"width":640,"height":50,"fill":"#bf8a4a"},{"id":"tank-frame","type":"rect","x":80,"y":70,"width":640,"height":360,"fill":"none","stroke":"#37474f","stroke-width":8},{"id":"plant1","type":"path","d":"M 200 380 Q 190 340 200 300 Q 210 260 200 220","fill":"none","stroke":"#2e7d32","stroke-width":14},{"id":"plant2","type":"path","d":"M 600 380 Q 590 340 600 300 Q 610 270 600 240","fill":"none","stroke":"#388e3c","stroke-width":14},{"id":"rock1","type":"ellipse","cx":300,"cy":385,"rx":35,"ry":14,"fill":"#616161"},{"id":"rock2","type":"ellipse","cx":500,"cy":388,"rx":30,"ry":12,"fill":"#757575"},{"id":"fish1","type":"ellipse","cx":320,"cy":200,"rx":32,"ry":18,"fill":"#ff6f00"},{"id":"fish1-tail","type":"polygon","points":"288,200 268,185 268,215","fill":"#ff6f00"},{"id":"fish2","type":"ellipse","cx":530,"cy":260,"rx":28,"ry":16,"fill":"#fbc02d"},{"id":"fish2-tail","type":"polygon","points":"558,260 575,247 575,273","fill":"#fbc02d"},{"id":"bubble1","type":"circle","cx":200,"cy":130,"r":6,"fill":"#ffffff","fill-opacity":0.7},{"id":"bubble2","type":"circle","cx":220,"cy":100,"r":4,"fill":"#ffffff","fill-opacity":0.7}],"differences":[{"hint":"Fish 1 is purple","hitZone":{"cx":320,"cy":200,"r":38},"modify":{"id":"fish1","fill":"#7e57c2"}},{"hint":"Fish 1 tail too","hitZone":{"cx":278,"cy":200,"r":20},"modify":{"id":"fish1-tail","fill":"#7e57c2"}},{"hint":"Plant 2 gone","hitZone":{"cx":600,"cy":310,"r":55},"remove":"plant2"},{"hint":"Extra rock","hitZone":{"cx":400,"cy":390,"r":25},"add":{"id":"rock3","type":"ellipse","cx":400,"cy":390,"rx":22,"ry":10,"fill":"#9e9e9e"}},{"hint":"Fish 2 a touch bigger","hitZone":{"cx":530,"cy":260,"r":34},"modify":{"id":"fish2","rx":32,"ry":19}}]},{"id":"dog-park","title":"At the Dog Park","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":340,"fill":"#bbdefb"},{"id":"grass","type":"rect","x":0,"y":340,"width":800,"height":160,"fill":"#7cb342"},{"id":"sun","type":"circle","cx":720,"cy":70,"r":38,"fill":"#ffd93d"},{"id":"cloud1","type":"ellipse","cx":200,"cy":90,"rx":55,"ry":18,"fill":"#ffffff"},{"id":"cloud2","type":"ellipse","cx":480,"cy":60,"rx":45,"ry":16,"fill":"#ffffff"},{"id":"tree-trunk","type":"rect","x":90,"y":280,"width":24,"height":80,"fill":"#6f4e37"},{"id":"tree-leaves","type":"circle","cx":102,"cy":260,"r":50,"fill":"#2e7d32"},{"id":"dog-body","type":"ellipse","cx":420,"cy":370,"rx":55,"ry":28,"fill":"#fbe9b7"},{"id":"dog-head","type":"circle","cx":480,"cy":350,"r":24,"fill":"#fbe9b7"},{"id":"dog-ear","type":"ellipse","cx":472,"cy":330,"rx":8,"ry":14,"fill":"#a0522d"},{"id":"dog-spot","type":"ellipse","cx":405,"cy":365,"rx":14,"ry":9,"fill":"#a0522d"},{"id":"dog-leg1","type":"rect","x":380,"y":395,"width":8,"height":25,"fill":"#fbe9b7"},{"id":"dog-leg2","type":"rect","x":450,"y":395,"width":8,"height":25,"fill":"#fbe9b7"},{"id":"dog-tail","type":"path","d":"M 365 360 Q 340 340 350 320","fill":"none","stroke":"#fbe9b7","stroke-width":10},{"id":"ball","type":"circle","cx":250,"cy":410,"r":18,"fill":"#e53935"},{"id":"bird","type":"ellipse","cx":350,"cy":140,"rx":12,"ry":7,"fill":"#333"}],"differences":[{"hint":"Ball is green","hitZone":{"cx":250,"cy":410,"r":24},"modify":{"id":"ball","fill":"#43a047"}},{"hint":"Cloud 2 gone","hitZone":{"cx":480,"cy":60,"r":45},"remove":"cloud2"},{"hint":"Dog spot gone","hitZone":{"cx":405,"cy":365,"r":18},"remove":"dog-spot"},{"hint":"Bird moved","hitZone":{"cx":600,"cy":130,"r":22},"modify":{"id":"bird","cx":600,"cy":130}},{"hint":"Dog ear slightly bigger","hitZone":{"cx":472,"cy":330,"r":18},"modify":{"id":"dog-ear","ry":17}}]},{"id":"circus-tent","title":"Circus Day","width":800,"height":500,"elements":[{"id":"sky","type":"rect","x":0,"y":0,"width":800,"height":350,"fill":"#fff3e0"},{"id":"ground","type":"rect","x":0,"y":350,"width":800,"height":150,"fill":"#a1887f"},{"id":"tent","type":"polygon","points":"240,400 560,400 400,160","fill":"#ef5350"},{"id":"tent-stripe1","type":"polygon","points":"260,400 320,400 360,200 340,200","fill":"#fff"},{"id":"tent-stripe2","type":"polygon","points":"380,400 420,400 415,180 385,180","fill":"#fff"},{"id":"tent-stripe3","type":"polygon","points":"480,400 540,400 460,200 440,200","fill":"#fff"},{"id":"tent-flag","type":"polygon","points":"400,160 400,120 440,140","fill":"#fdd835"},{"id":"tent-pole","type":"rect","x":397,"y":120,"width":6,"height":40,"fill":"#6f4e37"},{"id":"ball","type":"circle","cx":130,"cy":400,"r":32,"fill":"#1976d2"},{"id":"ball-stripe","type":"rect","x":100,"y":397,"width":60,"height":6,"fill":"#fff"},{"id":"balloon1","type":"circle","cx":660,"cy":170,"r":22,"fill":"#e53935"},{"id":"balloon2","type":"circle","cx":700,"cy":130,"r":22,"fill":"#43a047"},{"id":"balloon3","type":"circle","cx":730,"cy":180,"r":22,"fill":"#fbc02d"},{"id":"balloon-strings","type":"path","d":"M 660 192 L 690 280 M 700 152 L 690 280 M 730 202 L 690 280","fill":"none","stroke":"#666","stroke-width":2},{"id":"sun","type":"circle","cx":80,"cy":80,"r":36,"fill":"#ffd93d"}],"differences":[{"hint":"Tent flag is blue","hitZone":{"cx":415,"cy":135,"r":28},"modify":{"id":"tent-flag","fill":"#1976d2"}},{"hint":"Middle tent stripe gone","hitZone":{"cx":400,"cy":290,"r":30},"remove":"tent-stripe2"},{"hint":"Ball is red","hitZone":{"cx":130,"cy":400,"r":38},"modify":{"id":"ball","fill":"#e53935"}},{"hint":"Extra balloon","hitZone":{"cx":620,"cy":230,"r":25},"add":{"id":"balloon4","type":"circle","cx":620,"cy":230,"r":18,"fill":"#9c27b0"}},{"hint":"Sun a tiny bit smaller","hitZone":{"cx":80,"cy":80,"r":40},"modify":{"id":"sun","r":32}}]},{"id":"fruit-bowl","title":"Fruit Bowl","width":800,"height":500,"elements":[{"id":"table","type":"rect","x":0,"y":0,"width":800,"height":500,"fill":"#efebe9"},{"id":"table-shadow","type":"ellipse","cx":400,"cy":420,"rx":220,"ry":28,"fill":"#000","fill-opacity":0.1},{"id":"bowl-back","type":"ellipse","cx":400,"cy":320,"rx":200,"ry":35,"fill":"#90a4ae"},{"id":"bowl-body","type":"path","d":"M 200 320 Q 220 430 400 430 Q 580 430 600 320 Z","fill":"#78909c"},{"id":"apple","type":"circle","cx":320,"cy":300,"r":38,"fill":"#e53935"},{"id":"apple-stem","type":"rect","x":318,"y":258,"width":4,"height":10,"fill":"#5d4037"},{"id":"apple-leaf","type":"ellipse","cx":332,"cy":260,"rx":7,"ry":4,"fill":"#43a047"},{"id":"orange","type":"circle","cx":470,"cy":310,"r":34,"fill":"#ff7043"},{"id":"orange-dot","type":"circle","cx":468,"cy":282,"r":3,"fill":"#bf360c"},{"id":"banana","type":"path","d":"M 250 290 Q 200 250 180 290 Q 200 320 250 310 Z","fill":"#fdd835"},{"id":"grape1","type":"circle","cx":540,"cy":320,"r":8,"fill":"#7b1fa2"},{"id":"grape2","type":"circle","cx":555,"cy":310,"r":8,"fill":"#7b1fa2"},{"id":"grape3","type":"circle","cx":525,"cy":310,"r":8,"fill":"#7b1fa2"},{"id":"grape4","type":"circle","cx":548,"cy":295,"r":8,"fill":"#7b1fa2"},{"id":"grape5","type":"circle","cx":533,"cy":295,"r":8,"fill":"#7b1fa2"}],"differences":[{"hint":"Apple is green","hitZone":{"cx":320,"cy":300,"r":44},"modify":{"id":"apple","fill":"#7cb342"}},{"hint":"Banana gone","hitZone":{"cx":215,"cy":290,"r":50},"remove":"banana"},{"hint":"Extra grape","hitZone":{"cx":565,"cy":295,"r":14},"add":{"id":"grape6","type":"circle","cx":565,"cy":295,"r":8,"fill":"#7b1fa2"}},{"hint":"Bowl is darker","hitZone":{"cx":400,"cy":380,"r":40},"modify":{"id":"bowl-body","fill":"#455a64"}},{"hint":"Apple leaf slightly bigger","hitZone":{"cx":332,"cy":260,"r":14},"modify":{"id":"apple-leaf","rx":10,"ry":6}}]}];
+
+(() => {
+  const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  // Tap forgiveness, expressed in SVG units. Scenes use viewBox 800x500, so 18 units
+  // is roughly a fingertip's worth of slack on a typical phone.
+  const TAP_PAD = IS_TOUCH ? 18 : 0;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const foundCountEl = document.getElementById('found-count');
+  const refContainer = document.getElementById('ref-container');
+  const modContainer = document.getElementById('mod-container');
+  const celebration = document.getElementById('celebration');
+
+  let allScenes = [];
+  let queue = [];
+  let currentScene = null;
+  let foundCount = 0;
+  let locked = false;
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function makeSvgEl(type, attrs = {}) {
+    const el = document.createElementNS(SVG_NS, type);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === undefined || v === null) continue;
+      el.setAttribute(k, v);
+    }
+    return el;
+  }
+
+  function elementFromSpec(spec) {
+    const attrs = {};
+    for (const [k, v] of Object.entries(spec)) {
+      if (k === 'type' || k === 'id' || k === 'text') continue;
+      attrs[k] = v;
+    }
+    const node = makeSvgEl(spec.type, attrs);
+    if (spec.type === 'text' && spec.text !== undefined) {
+      node.textContent = spec.text;
+    }
+    return node;
+  }
+
+  function applyDifferences(elements, differences) {
+    let out = elements.map(e => ({ ...e }));
+    for (const diff of differences) {
+      if (diff.remove) {
+        out = out.filter(e => e.id !== diff.remove);
+      }
+      if (diff.modify) {
+        const idx = out.findIndex(e => e.id === diff.modify.id);
+        if (idx >= 0) out[idx] = { ...out[idx], ...diff.modify };
+      }
+      if (diff.add) {
+        out.push({ ...diff.add });
+      }
+    }
+    return out;
+  }
+
+  function buildSvg(scene, applyDiffs) {
+    const svg = makeSvgEl('svg', {
+      viewBox: `0 0 ${scene.width} ${scene.height}`,
+      preserveAspectRatio: 'xMidYMid meet',
+      // Explicit intrinsic dimensions are required on mobile Safari —
+      // without them the SVG collapses to 0×0 and renders blank.
+      width: scene.width,
+      height: scene.height,
+    });
+    const elements = applyDiffs
+      ? applyDifferences(scene.elements, scene.differences)
+      : scene.elements;
+    for (const el of elements) {
+      svg.appendChild(elementFromSpec(el));
+    }
+    return svg;
+  }
+
+  function loadScene(scene) {
+    currentScene = JSON.parse(JSON.stringify(scene));
+    currentScene.differences.forEach(d => d.found = false);
+    foundCount = 0;
+    locked = false;
+    updateCounter();
+
+    refContainer.innerHTML = '';
+    refContainer.appendChild(buildSvg(currentScene, false));
+
+    modContainer.innerHTML = '';
+    const modSvg = buildSvg(currentScene, true);
+    modSvg.id = 'modified-svg';
+    modSvg.addEventListener('pointerdown', onTap);
+    modContainer.appendChild(modSvg);
+  }
+
+  function nextScene() {
+    if (queue.length === 0) {
+      queue = shuffle(allScenes.map((_, i) => i));
+    }
+    const idx = queue.shift();
+    loadScene(allScenes[idx]);
+  }
+
+  function updateCounter() {
+    foundCountEl.textContent = foundCount;
+  }
+
+  function svgPointFromEvent(svg, ev) {
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX;
+    pt.y = ev.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }
+
+  function onTap(ev) {
+    if (locked || !currentScene) return;
+    if (ev.cancelable) ev.preventDefault();
+    const svg = ev.currentTarget;
+    const p = svgPointFromEvent(svg, ev);
+    if (!p) return;
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const diff of currentScene.differences) {
+      if (diff.found) continue;
+      const dx = p.x - diff.hitZone.cx;
+      const dy = p.y - diff.hitZone.cy;
+      const d = Math.hypot(dx, dy);
+      if (d <= diff.hitZone.r + TAP_PAD && d < bestDist) {
+        best = diff;
+        bestDist = d;
+      }
+    }
+    if (best) {
+      markFound(best, svg);
+    } else {
+      showMiss(svg, p.x, p.y);
+    }
+  }
+
+  function markFound(diff, svg) {
+    diff.found = true;
+    foundCount++;
+    updateCounter();
+    const circle = makeSvgEl('circle', {
+      cx: diff.hitZone.cx,
+      cy: diff.hitZone.cy,
+      r: diff.hitZone.r,
+      class: 'found-marker',
+    });
+    svg.appendChild(circle);
+    if (foundCount === currentScene.differences.length) {
+      locked = true;
+      setTimeout(celebrate, 700);
+    }
+  }
+
+  function showMiss(svg, x, y) {
+    const circle = makeSvgEl('circle', {
+      cx: x, cy: y, r: 14, class: 'miss-marker',
+    });
+    svg.appendChild(circle);
+    setTimeout(() => circle.remove(), 600);
+  }
+
+  function spawnConfetti() {
+    const colors = ['#ff6b6b', '#ffd93d', '#6bcf7f', '#4d96ff', '#c780fa', '#ff9f43'];
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = (1.6 + Math.random() * 1.2) + 's';
+      c.style.animationDelay = (Math.random() * 0.4) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      frag.appendChild(c);
+    }
+    celebration.appendChild(frag);
+    setTimeout(() => {
+      celebration.querySelectorAll('.confetti').forEach(n => n.remove());
+    }, 3500);
+  }
+
+  function celebrate() {
+    celebration.classList.remove('hidden');
+    spawnConfetti();
+    setTimeout(() => {
+      celebration.classList.add('hidden');
+      nextScene();
+    }, 2200);
+  }
+
+  function start() {
+    allScenes = SCENES;
+    nextScene();
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
