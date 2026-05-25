@@ -345,7 +345,7 @@
     <div class="game-area">
       <div class="grid-container" id="grid-container">
         <div class="grid" id="grid"></div>
-        <svg class="overlay" id="overlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <svg class="overlay" id="overlay" viewBox="0 0 100 100"></svg>
       </div>
       <div class="words-box">
         <h3>Find these words</h3>
@@ -432,6 +432,11 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
   // ---- Start / new game ----
   startBtn.addEventListener('click', () => beginGame());
   newGameBtn.addEventListener('click', () => beginGame());
+  window.addEventListener('resize', () => {
+    if (!puzzle || gameScreen.classList.contains('hidden')) return;
+    syncOverlayToGrid();
+    renderFoundLines();
+  });
 
   function beginGame() {
     setupScreen.classList.add('hidden');
@@ -464,7 +469,7 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
         gridEl.appendChild(cell);
       }
     }
-    overlayEl.setAttribute('viewBox', `0 0 ${puzzle.size} ${puzzle.size}`);
+    syncOverlayToGrid();
     overlayEl.innerHTML = '';
 
     wordsListEl.innerHTML = '';
@@ -493,19 +498,21 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
       return;
     }
 
-    const last = selectedCells[selectedCells.length - 1];
+    const inSelIndex = selectedCells.findIndex(s => s.r === r && s.c === c);
+    if (inSelIndex !== -1) {
+      // Clicking a highlighted letter undoes it and anything after it.
+      selectedCells = selectedCells.slice(0, inSelIndex);
+      updateSelectionUI();
+      return;
+    }
 
-    // Click on last selected cell -> no-op
-    if (last.r === r && last.c === c) return;
+    const last = selectedCells[selectedCells.length - 1];
 
     // Check adjacency to last (8-direction, one step)
     const dr = Math.abs(r - last.r), dc = Math.abs(c - last.c);
     const isAdjacent = dr <= 1 && dc <= 1 && (dr + dc > 0);
 
-    // Already in selection?
-    const inSel = selectedCells.some(s => s.r === r && s.c === c);
-
-    if (isAdjacent && !inSel) {
+    if (isAdjacent) {
       selectedCells.push({ r, c });
       updateSelectionUI();
       checkForMatch();
@@ -549,6 +556,7 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
   function wordFound(placement) {
     placement.found = true;
     const color = foundColors[colorIdx++ % foundColors.length];
+    placement.color = color;
 
     // Briefly show the highlight, then clear and animate the circle.
     setTimeout(() => {
@@ -564,29 +572,48 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
     }, 220);
   }
 
+  function syncOverlayToGrid() {
+    const gridRect = gridEl.getBoundingClientRect();
+    overlayEl.setAttribute('viewBox', `0 0 ${gridRect.width} ${gridRect.height}`);
+  }
+
+  function getCellCenter(r, c) {
+    const cell = gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+    if (!cell) return null;
+    const cellRect = cell.getBoundingClientRect();
+    const gridRect = gridEl.getBoundingClientRect();
+    return {
+      x: (cellRect.left - gridRect.left) + (cellRect.width / 2),
+      y: (cellRect.top - gridRect.top) + (cellRect.height / 2),
+      size: Math.min(cellRect.width, cellRect.height),
+    };
+  }
+
+  function renderFoundLines() {
+    overlayEl.innerHTML = '';
+    for (const placement of puzzle.placements) {
+      if (placement.found && placement.color) {
+        drawCircle(placement, placement.color);
+      }
+    }
+  }
+
   function drawCircle(placement, color) {
     const start = placement.cells[0];
     const end   = placement.cells[placement.cells.length - 1];
-    // Cell center in viewBox coords: (col + 0.5, row + 0.5)
-    const x1 = start[1] + 0.5;
-    const y1 = start[0] + 0.5;
-    const x2 = end[1] + 0.5;
-    const y2 = end[0] + 0.5;
+    syncOverlayToGrid();
+    const startCenter = getCellCenter(start[0], start[1]);
+    const endCenter = getCellCenter(end[0], end[1]);
+    if (!startCenter || !endCenter) return;
     const path = document.createElementNS(SVG_NS, 'line');
-    path.setAttribute('x1', x1);
-    path.setAttribute('y1', y1);
-    path.setAttribute('x2', x2);
-    path.setAttribute('y2', y2);
+    path.setAttribute('x1', startCenter.x);
+    path.setAttribute('y1', startCenter.y);
+    path.setAttribute('x2', endCenter.x);
+    path.setAttribute('y2', endCenter.y);
     path.setAttribute('stroke', color);
-    path.setAttribute('stroke-width', '0.78');
-    path.setAttribute('vector-effect', 'non-scaling-stroke');
+    path.setAttribute('stroke-width', Math.max(6, startCenter.size * 0.72));
     path.setAttribute('class', 'found-line');
-    // Use SVG attributes for path-based animation
     overlayEl.appendChild(path);
-
-    // Set stroke-width relative to viewBox so it scales with the grid.
-    // (viewBox is sized 0..N, so 0.78 = ~78% of one cell wide — matches a pencil circle.)
-    path.removeAttribute('vector-effect');
   }
 
   function showCongrats() {

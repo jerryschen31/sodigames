@@ -1,3 +1,5 @@
 .env
 .wrangler/
 */*.plan
+.DS_Store
+src/.DS_Store
