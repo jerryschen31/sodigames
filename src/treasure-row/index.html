@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Treasure Row</title>
+<style>
+  :root {
+    --gold-light: #fff0a6;
+    --gold: #efb72f;
+    --gold-dark: #8a5b0b;
+    --silver-light: #f7fafc;
+    --silver: #b8c0ca;
+    --silver-dark: #4d5866;
+    --wood: #6c3f1e;
+    --wood-dark: #2d1809;
+    --parchment: #f6e6bd;
+    --sea: #092231;
+    --sea-dark: #030b12;
+    --frame: #171717;
+    --frame-edge: #050505;
+    --glow: rgba(255, 223, 115, 0.45);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    min-height: 100dvh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--parchment);
+    background:
+      radial-gradient(circle at 14% 18%, rgba(239, 183, 47, 0.14), transparent 24%),
+      radial-gradient(circle at 86% 78%, rgba(184, 192, 202, 0.10), transparent 28%),
+      linear-gradient(180deg, var(--sea), var(--sea-dark));
+    touch-action: none;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  #rotate-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    text-align: center;
+    background: radial-gradient(circle at center, #0d3448, #02070b 78%);
+  }
+
+  #rotate-gate.show { display: flex; }
+
+  .rotate-card {
+    max-width: 340px;
+    padding: 24px;
+    border: 2px solid rgba(246, 230, 189, 0.28);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+  }
+
+  .rotate-icon {
+    width: 96px;
+    height: 64px;
+    margin: 0 auto 18px;
+    border: 5px solid var(--gold);
+    border-radius: 16px;
+    position: relative;
+    animation: rotateHint 2.2s ease-in-out infinite;
+  }
+
+  .rotate-icon::after {
+    content: "";
+    position: absolute;
+    width: 28px;
+    height: 5px;
+    left: 50%;
+    bottom: -16px;
+    transform: translateX(-50%);
+    background: var(--gold);
+    border-radius: 99px;
+  }
+
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+  }
+
+  .rotate-card h2 {
+    font-family: Georgia, serif;
+    color: var(--gold-light);
+    font-size: 28px;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 0 #000;
+  }
+
+  .rotate-card p { line-height: 1.4; color: #d6c496; }
+
+  #app {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(210px, 280px) 1fr;
+    gap: 18px;
+    padding: 14px 18px;
+  }
+
+  aside {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  h1 {
+    font-family: Georgia, serif;
+    font-size: clamp(28px, 4vw, 42px);
+    color: var(--gold-light);
+    text-align: center;
+    line-height: 0.95;
+    text-shadow: 0 3px 0 #000, 0 0 18px rgba(239, 183, 47, 0.35);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #d6c496;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .panel,
+  .player-card {
+    border: 2px solid #170b03;
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.34)),
+      repeating-linear-gradient(90deg, var(--wood) 0 24px, #533013 24px 48px);
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,0.06),
+      0 8px 18px rgba(0,0,0,0.35);
+  }
+
+  .turn-panel {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr 76px;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .turn-label {
+    font-size: 13px;
+    color: #d6c496;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  #turn-name {
+    display: block;
+    margin-top: 2px;
+    color: var(--gold-light);
+    font-family: Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .coin-holder {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1b1107, #020202 72%);
+    border: 3px solid #110802;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.75), 0 0 12px rgba(239,183,47,0.18);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .coin-holder:active { cursor: grabbing; }
+  .coin-holder.disabled { opacity: 0.35; pointer-events: none; }
+
+  .player-cards { display: flex; flex-direction: column; gap: 10px; }
+
+  .player-card {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    transition: transform 0.18s, box-shadow 0.18s;
+  }
+
+  .player-card.active {
+    transform: translateX(4px);
+    box-shadow:
+      inset 0 0 0 2px var(--gold-light),
+      0 0 20px rgba(239,183,47,0.35),
+      0 8px 18px rgba(0,0,0,0.35);
+  }
+
+  .player-card > .coin {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-name {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: rgba(0,0,0,0.22);
+    color: var(--parchment);
+    border-radius: 8px;
+    padding: 8px 9px;
+    font: 700 17px Georgia, serif;
+  }
+
+  .player-note {
+    margin-top: 4px;
+    color: #d6c496;
+    font-size: 12px;
+  }
+
+  .small-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+
+  button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font: 800 14px system-ui, sans-serif;
+    color: #201103;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    box-shadow: 0 4px 0 var(--gold-dark), 0 8px 14px rgba(0,0,0,0.25);
+    cursor: pointer;
+  }
+
+  button:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--gold-dark); }
+
+  main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  #game-area {
+    position: relative;
+    width: min(78vw, calc((100dvh - 40px) * 1.16));
+    max-width: 880px;
+    aspect-ratio: 7 / 6;
+  }
+
+  #board {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: clamp(5px, 1.1vmin, 11px);
+    padding: clamp(9px, 1.7vmin, 16px);
+    border-radius: clamp(14px, 2vmin, 24px);
+    background:
+      radial-gradient(circle at 24% 18%, rgba(255,255,255,0.08), transparent 25%),
+      radial-gradient(circle at 76% 82%, rgba(255,255,255,0.04), transparent 28%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.035) 0 3px, transparent 3px 12px),
+      linear-gradient(145deg, #282828, var(--frame) 45%, #050505);
+    border: clamp(5px, 0.9vmin, 9px) solid var(--frame-edge);
+    box-shadow:
+      inset 0 0 0 clamp(3px, 0.6vmin, 6px) rgba(255,255,255,0.035),
+      inset 0 16px 28px rgba(255,255,255,0.05),
+      inset 0 -16px 28px rgba(0,0,0,0.58),
+      0 24px 42px rgba(0,0,0,0.48);
+    overflow: visible;
+  }
+
+  .cell {
+    position: relative;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 58%, rgba(0,0,0,0.94) 0 54%, rgba(0,0,0,0.45) 55% 62%, rgba(255,255,255,0.04) 63%),
+      radial-gradient(circle at 35% 25%, rgba(255,255,255,0.10), transparent 45%);
+    box-shadow:
+      inset 0 7px 14px rgba(0,0,0,0.86),
+      inset 0 -3px 4px rgba(255,255,255,0.05),
+      0 2px 0 rgba(255,255,255,0.04);
+  }
+
+  .cell.column-hover::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+    background: var(--highlight);
+    box-shadow: 0 0 16px var(--glow);
+  }
+
+  .coin {
+    width: 86%;
+    height: 86%;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow:
+      inset 0 3px 4px rgba(255,255,255,0.45),
+      inset 0 -5px 7px rgba(0,0,0,0.34),
+      0 5px 10px rgba(0,0,0,0.45);
+    pointer-events: none;
+  }
+
+  .coin::before {
+    content: "";
+    position: absolute;
+    inset: 13%;
+    border-radius: 50%;
+    border: max(2px, 0.33vmin) dashed rgba(0,0,0,0.28);
+  }
+
+  .coin::after {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(18px, 3.2vmin, 34px);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.28), 0 -1px 0 rgba(0,0,0,0.42);
+  }
+
+  .coin.gold {
+    color: #5e3904;
+    background:
+      radial-gradient(circle at 34% 27%, #fff7c6 0 10%, transparent 22%),
+      conic-gradient(from 20deg, #b87b12, var(--gold-light), var(--gold), #9a6610, var(--gold-light), #c88c17),
+      radial-gradient(circle, var(--gold), var(--gold-dark));
+  }
+  .coin.gold::after { content: "$"; }
+
+  .coin.silver {
+    color: #29323d;
+    background:
+      radial-gradient(circle at 34% 27%, #ffffff 0 11%, transparent 23%),
+      repeating-conic-gradient(from 18deg, #e8edf2 0 10deg, #9aa5b1 10deg 20deg, #d7dde3 20deg 31deg),
+      radial-gradient(circle, var(--silver), var(--silver-dark));
+  }
+  .coin.silver::after { content: "X"; font-family: system-ui, sans-serif; }
+
+  .coin.ghost {
+    position: fixed;
+    width: var(--ghost-size, 58px);
+    height: var(--ghost-size, 58px);
+    z-index: 20;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .coin.drop {
+    position: absolute;
+    z-index: 8;
+    width: var(--coin-size);
+    height: var(--coin-size);
+    left: var(--drop-left);
+    top: var(--drop-start);
+    animation: coinDrop 420ms cubic-bezier(.16,.78,.25,1.08) forwards;
+  }
+
+  @keyframes coinDrop {
+    to { top: var(--drop-end); }
+  }
+
+  .coin.shine {
+    animation: shineWin 900ms ease-in-out infinite alternate;
+    box-shadow:
+      inset 0 3px 4px rgba(255,255,255,0.65),
+      inset 0 -5px 7px rgba(0,0,0,0.28),
+      0 0 0 5px rgba(255,255,255,0.18),
+      0 0 22px 8px rgba(255,235,160,0.82);
+  }
+
+  @keyframes shineWin {
+    from { filter: brightness(1); transform: scale(1); }
+    to { filter: brightness(1.35); transform: scale(1.08); }
+  }
+
+  #message {
+    position: absolute;
+    left: 50%;
+    top: -42px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    color: var(--parchment);
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(246,230,189,0.25);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 800;
+    box-shadow: 0 5px 14px rgba(0,0,0,0.3);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,0.62);
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    width: min(420px, 92vw);
+    border-radius: 18px;
+    padding: 24px;
+    text-align: center;
+    color: #2a1604;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.12)),
+      var(--parchment);
+    border: 4px solid var(--wood-dark);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  }
+
+  .modal h2 {
+    font-family: Georgia, serif;
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .modal p { font-weight: 700; margin-bottom: 18px; }
+  .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal .no { background: linear-gradient(180deg, #e7edf2, #aab4bf); box-shadow: 0 4px 0 #606b76; }
+
+  @media (max-width: 900px) and (orientation: landscape) {
+    #app { grid-template-columns: 210px 1fr; gap: 10px; padding: 8px 10px; }
+    h1 { font-size: 28px; }
+    .subtitle { font-size: 9px; }
+    .turn-panel { grid-template-columns: 1fr 58px; padding: 8px; }
+    .coin-holder { width: 54px; height: 54px; }
+    .player-card { grid-template-columns: 38px 1fr; padding: 7px; }
+    .player-card > .coin { width: 38px; height: 38px; }
+    .player-name { font-size: 14px; padding: 6px 7px; }
+    .player-note { display: none; }
+    button { padding: 8px 10px; font-size: 12px; }
+    #game-area { width: min(74vw, calc((100dvh - 22px) * 1.16)); }
+    #message { top: 4px; z-index: 11; font-size: 12px; padding: 5px 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="rotate-gate" aria-hidden="true">
+  <div class="rotate-card">
+    <div class="rotate-icon"></div>
+    <h2>Turn the Map</h2>
+    <p>Treasure Row needs landscape on mobile and iPad so the 7 by 6 board has room to play.</p>
+  </div>
+</div>
+
+<div id="app">
+  <aside>
+    <div>
+      <h1>Treasure Row</h1>
+      <div class="subtitle">Four coins wins</div>
+    </div>
+
+    <section class="panel turn-panel">
+      <div>
+        <div class="turn-label">Current turn</div>
+        <strong id="turn-name">P1</strong>
+      </div>
+      <div class="coin-holder" id="coin-holder" title="Drag the coin to a column">
+        <div class="coin gold" id="turn-coin"></div>
+      </div>
+    </section>
+
+    <section class="player-cards">
+      <div class="player-card active" data-player="1">
+        <div class="coin gold"></div>
+        <div>
+          <input class="player-name" id="name-1" value="P1" maxlength="14" aria-label="Gold player name" />
+          <div class="player-note">Gold coin</div>
+        </div>
+      </div>
+      <div class="player-card" data-player="2">
+        <div class="coin silver"></div>
+        <div>
+          <input class="player-name" id="name-2" value="P2" maxlength="14" aria-label="Silver player name" />
+          <div class="player-note">Silver coin</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="small-actions">
+      <button id="new-round">Start Over</button>
+    </div>
+  </aside>
+
+  <main>
+    <section id="game-area" aria-label="Treasure Row board">
+      <div id="message">Drag the coin to a column</div>
+      <div id="board"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="result-modal">
+  <div class="modal">
+    <h2 id="result-title">Treasure Claimed!</h2>
+    <p id="result-text">Play a new game?</p>
+    <div class="modal-actions">
+      <button class="no" id="go-home">No</button>
+      <button id="play-again">Yes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const ROWS = 6;
+  const COLS = 7;
+  const EMPTY = 0;
+  const GOLD = 1;
+  const SILVER = 2;
+
+  const boardEl = document.getElementById('board');
+  const gameArea = document.getElementById('game-area');
+  const coinHolder = document.getElementById('coin-holder');
+  const turnCoin = document.getElementById('turn-coin');
+  const turnName = document.getElementById('turn-name');
+  const message = document.getElementById('message');
+  const playerCards = [...document.querySelectorAll('.player-card')];
+  const nameInputs = {
+    1: document.getElementById('name-1'),
+    2: document.getElementById('name-2'),
+  };
+  const modal = document.getElementById('result-modal');
+  const resultTitle = document.getElementById('result-title');
+  const resultText = document.getElementById('result-text');
+  const rotateGate = document.getElementById('rotate-gate');
+
+  let grid = [];
+  let currentPlayer = GOLD;
+  let gameOver = false;
+  let isAnimating = false;
+  let activeColumn = null;
+  let dragging = false;
+  let ghost = null;
+  let dragPointerId = null;
+
+  function coinClass(player) {
+    return player === GOLD ? 'gold' : 'silver';
+  }
+
+  function playerName(player) {
+    return (nameInputs[player].value || `P${player}`).trim() || `P${player}`;
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function resetGame() {
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
+    currentPlayer = GOLD;
+    gameOver = false;
+    isAnimating = false;
+    activeColumn = null;
+    modal.classList.remove('open');
+    buildBoard();
+    updateTurnUI();
+    setMessage('Drag the coin to a column');
+  }
+
+  function updateTurnUI() {
+    turnName.textContent = playerName(currentPlayer);
+    turnCoin.className = `coin ${coinClass(currentPlayer)}`;
+    playerCards.forEach(card => {
+      card.classList.toggle('active', Number(card.dataset.player) === currentPlayer);
+    });
+    coinHolder.classList.toggle('disabled', gameOver || isAnimating);
+  }
+
+  function setMessage(text) {
+    message.textContent = text;
+  }
+
+  function getCell(row, col) {
+    return boardEl.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+  }
+
+  function getOpenRow(col) {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (grid[r][col] === EMPTY) return r;
+    }
+    return -1;
+  }
+
+  function clearColumnHighlight() {
+    boardEl.querySelectorAll('.column-hover').forEach(cell => cell.classList.remove('column-hover'));
+  }
+
+  function highlightColumn(col) {
+    clearColumnHighlight();
+    activeColumn = col;
+    if (col === null || getOpenRow(col) === -1) return;
+    for (let r = 0; r < ROWS; r++) getCell(r, col).classList.add('column-hover');
+  }
+
+  function columnFromPoint(clientX, clientY) {
+    const rect = boardEl.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top - 80 || clientY > rect.bottom + 40) {
+      return null;
+    }
+    const colWidth = rect.width / COLS;
+    const col = Math.floor((clientX - rect.left) / colWidth);
+    return Math.max(0, Math.min(COLS - 1, col));
+  }
+
+  function createCoinElement(player) {
+    const coin = document.createElement('div');
+    coin.className = `coin ${coinClass(player)}`;
+    return coin;
+  }
+
+  function renderCoin(row, col, player, shine) {
+    const cell = getCell(row, col);
+    cell.innerHTML = '';
+    const coin = createCoinElement(player);
+    if (shine) coin.classList.add('shine');
+    cell.appendChild(coin);
+  }
+
+  function dropCoin(col) {
+    if (gameOver || isAnimating) return;
+    const row = getOpenRow(col);
+    if (row === -1) {
+      setMessage('That column is full');
+      return;
+    }
+    isAnimating = true;
+    coinHolder.classList.add('disabled');
+    clearColumnHighlight();
+
+    const player = currentPlayer;
+    const targetCell = getCell(row, col);
+    const target = targetCell.getBoundingClientRect();
+    const area = gameArea.getBoundingClientRect();
+    const size = Math.min(target.width, target.height) * 0.86;
+    const animCoin = createCoinElement(player);
+    animCoin.classList.add('drop');
+    animCoin.style.setProperty('--coin-size', `${size}px`);
+    animCoin.style.setProperty('--drop-left', `${target.left - area.left + (target.width - size) / 2}px`);
+    animCoin.style.setProperty('--drop-start', `${-size - 14}px`);
+    animCoin.style.setProperty('--drop-end', `${target.top - area.top + (target.height - size) / 2}px`);
+    gameArea.appendChild(animCoin);
+
+    animCoin.addEventListener('animationend', () => {
+      animCoin.remove();
+      grid[row][col] = player;
+      renderCoin(row, col, player, false);
+      const winCells = findWin(row, col, player);
+      if (winCells) {
+        handleWin(player, winCells);
+        return;
+      }
+      if (isBoardFull()) {
+        handleDraw();
+        return;
+      }
+      currentPlayer = currentPlayer === GOLD ? SILVER : GOLD;
+      isAnimating = false;
+      updateTurnUI();
+      setMessage(`${playerName(currentPlayer)} to move`);
+    }, { once: true });
+  }
+
+  function countDirection(row, col, dr, dc, player) {
+    const cells = [];
+    let r = row + dr;
+    let c = col + dc;
+    while (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === player) {
+      cells.push([r, c]);
+      r += dr;
+      c += dc;
+    }
+    return cells;
+  }
+
+  function findWin(row, col, player) {
+    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dr, dc] of dirs) {
+      const line = [
+        ...countDirection(row, col, -dr, -dc, player).reverse(),
+        [row, col],
+        ...countDirection(row, col, dr, dc, player),
+      ];
+      if (line.length >= 4) return line.slice(0, 4);
+    }
+    return null;
+  }
+
+  function isBoardFull() {
+    return grid[0].every(cell => cell !== EMPTY);
+  }
+
+  function handleWin(player, cells) {
+    gameOver = true;
+    isAnimating = false;
+    updateTurnUI();
+    cells.forEach(([r, c]) => renderCoin(r, c, player, true));
+    const winner = playerName(player);
+    setMessage(`${winner} wins!`);
+    resultTitle.textContent = `${winner} wins!`;
+    resultText.textContent = 'Play a new game?';
+    setTimeout(() => modal.classList.add('open'), 850);
+  }
+
+  function handleDraw() {
+    gameOver = true;
+    isAnimating = false;
+    updateTurnUI();
+    setMessage('The board is full');
+    resultTitle.textContent = 'A split treasure!';
+    resultText.textContent = 'Play a new game?';
+    setTimeout(() => modal.classList.add('open'), 450);
+  }
+
+  function startDrag(ev) {
+    if (gameOver || isAnimating) return;
+    ev.preventDefault();
+    dragging = true;
+    dragPointerId = ev.pointerId;
+    coinHolder.setPointerCapture(ev.pointerId);
+    coinHolder.classList.add('dragging');
+    const holderRect = coinHolder.getBoundingClientRect();
+    const size = Math.max(46, Math.min(holderRect.width, holderRect.height) * 0.94);
+    ghost = createCoinElement(currentPlayer);
+    ghost.classList.add('ghost');
+    ghost.style.setProperty('--ghost-size', `${size}px`);
+    document.body.appendChild(ghost);
+    moveGhost(ev.clientX, ev.clientY);
+  }
+
+  function moveGhost(clientX, clientY) {
+    if (!ghost) return;
+    ghost.style.left = `${clientX}px`;
+    ghost.style.top = `${clientY}px`;
+    const col = columnFromPoint(clientX, clientY);
+    highlightColumn(col);
+  }
+
+  function moveDrag(ev) {
+    if (!dragging || ev.pointerId !== dragPointerId) return;
+    ev.preventDefault();
+    moveGhost(ev.clientX, ev.clientY);
+  }
+
+  function endDrag(ev) {
+    if (!dragging || ev.pointerId !== dragPointerId) return;
+    ev.preventDefault();
+    dragging = false;
+    dragPointerId = null;
+    coinHolder.classList.remove('dragging');
+    if (ghost) {
+      ghost.remove();
+      ghost = null;
+    }
+    const col = columnFromPoint(ev.clientX, ev.clientY);
+    clearColumnHighlight();
+    if (col !== null) dropCoin(col);
+  }
+
+  function maybeClickColumn(ev) {
+    if (gameOver || isAnimating || dragging) return;
+    const col = columnFromPoint(ev.clientX, ev.clientY);
+    if (col !== null) dropCoin(col);
+  }
+
+  function updateRotateGate() {
+    const touchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const portrait = window.matchMedia('(orientation: portrait)').matches;
+    rotateGate.classList.toggle('show', touchDevice && portrait);
+  }
+
+  coinHolder.addEventListener('pointerdown', startDrag);
+  coinHolder.addEventListener('pointermove', moveDrag);
+  coinHolder.addEventListener('pointerup', endDrag);
+  coinHolder.addEventListener('pointercancel', endDrag);
+  boardEl.addEventListener('pointerdown', maybeClickColumn);
+  document.getElementById('new-round').addEventListener('click', resetGame);
+  document.getElementById('play-again').addEventListener('click', resetGame);
+  document.getElementById('go-home').addEventListener('click', () => {
+    window.location.href = 'https://sodigames.com/';
+  });
+  Object.values(nameInputs).forEach(input => {
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('input', updateTurnUI);
+  });
+  window.addEventListener('resize', updateRotateGate);
+  window.addEventListener('orientationchange', updateRotateGate);
+  document.addEventListener('gesturestart', ev => ev.preventDefault());
+
+  buildBoard();
+  resetGame();
+  updateRotateGate();
+})();
+</script>
+</body>
+</html>
