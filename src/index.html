@@ -97,6 +97,51 @@
         padding: 56px 20px 24px;
       }
 
+      .support-btn {
+        position: absolute;
+        top: 14px;
+        right: 18px;
+        text-decoration: none;
+        color: var(--ink);
+        font-family: "Baloo 2", "Fredoka", sans-serif;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: 0.4px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        border: 3px solid #fff;
+        background: linear-gradient(180deg, #ffe58f, #ffb256);
+        box-shadow:
+          0 4px 0 #c6761f,
+          0 8px 16px rgba(43, 35, 80, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .support-btn:hover,
+      .support-btn:focus-visible {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow:
+          0 6px 0 #c6761f,
+          0 12px 20px rgba(43, 35, 80, 0.3);
+        outline: none;
+      }
+
+      .support-btn:active {
+        transform: translateY(1px) scale(0.99);
+        box-shadow:
+          0 3px 0 #c6761f,
+          0 6px 12px rgba(43, 35, 80, 0.24);
+      }
+
+      @media (max-width: 700px) {
+        .support-btn {
+          top: 10px;
+          right: 12px;
+          font-size: 0.9rem;
+          padding: 8px 14px;
+        }
+      }
+
       header h1 {
         font-family: "Baloo 2", "Fredoka", sans-serif;
         font-weight: 800;
@@ -263,6 +308,14 @@
   </head>
   <body>
     <header>
+      <a
+        class="support-btn"
+        href="https://buymeacoffee.com/jerryschen7"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Support
+      </a>
       <h1>SoDi - Games for Kids</h1>
       <p>Pick a game and let's play! 🎈</p>
     </header>
