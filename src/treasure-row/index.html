@@ -108,6 +108,7 @@
   }
 
   aside {
+    grid-column: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -245,6 +246,7 @@
   button:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--gold-dark); }
 
   main {
+    grid-column: 2;
     min-width: 0;
     display: flex;
     align-items: center;
@@ -269,15 +271,16 @@
     padding: clamp(9px, 1.7vmin, 16px);
     border-radius: clamp(14px, 2vmin, 24px);
     background:
-      radial-gradient(circle at 24% 18%, rgba(255,255,255,0.08), transparent 25%),
-      radial-gradient(circle at 76% 82%, rgba(255,255,255,0.04), transparent 28%),
-      repeating-linear-gradient(135deg, rgba(255,255,255,0.035) 0 3px, transparent 3px 12px),
-      linear-gradient(145deg, #282828, var(--frame) 45%, #050505);
-    border: clamp(5px, 0.9vmin, 9px) solid var(--frame-edge);
+      radial-gradient(circle at 24% 18%, rgba(255,255,255,0.11), transparent 25%),
+      radial-gradient(circle at 76% 82%, rgba(255,255,255,0.06), transparent 28%),
+      repeating-linear-gradient(90deg, #6f4220 0 26px, #5c3518 26px 52px),
+      repeating-linear-gradient(130deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 12px),
+      linear-gradient(145deg, #7f4c24, #42240f 55%, #271308);
+    border: clamp(5px, 0.9vmin, 9px) solid #170b03;
     box-shadow:
-      inset 0 0 0 clamp(3px, 0.6vmin, 6px) rgba(255,255,255,0.035),
-      inset 0 16px 28px rgba(255,255,255,0.05),
-      inset 0 -16px 28px rgba(0,0,0,0.58),
+      inset 0 0 0 clamp(3px, 0.6vmin, 6px) rgba(255,255,255,0.08),
+      inset 0 16px 28px rgba(255,255,255,0.08),
+      inset 0 -16px 28px rgba(0,0,0,0.45),
       0 24px 42px rgba(0,0,0,0.48);
     overflow: visible;
   }
@@ -395,7 +398,7 @@
     position: absolute;
     left: 50%;
     top: -42px;
-    transform: translateX(-50%);
+    transform: translate(-50%, -8px);
     white-space: nowrap;
     color: var(--parchment);
     background: rgba(0,0,0,0.35);
@@ -404,6 +407,14 @@
     padding: 8px 14px;
     font-weight: 800;
     box-shadow: 0 5px 14px rgba(0,0,0,0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  #message.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 
   .modal-backdrop {
@@ -442,8 +453,8 @@
   .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .modal .no { background: linear-gradient(180deg, #e7edf2, #aab4bf); box-shadow: 0 4px 0 #606b76; }
 
-  @media (max-width: 900px) and (orientation: landscape) {
-    #app { grid-template-columns: 210px 1fr; gap: 10px; padding: 8px 10px; }
+  @media (pointer: coarse) and (orientation: landscape) {
+    #app { grid-template-columns: minmax(180px, 210px) 1fr; gap: 6px; padding: 8px 10px; }
     h1 { font-size: 28px; }
     .subtitle { font-size: 9px; }
     .turn-panel { grid-template-columns: 1fr 58px; padding: 8px; }
@@ -453,7 +464,8 @@
     .player-name { font-size: 14px; padding: 6px 7px; }
     .player-note { display: none; }
     button { padding: 8px 10px; font-size: 12px; }
-    #game-area { width: min(74vw, calc((100dvh - 22px) * 1.16)); }
+    main { justify-content: flex-start; }
+    #game-area { width: min(76vw, calc((100dvh - 22px) * 1.16)); }
     #message { top: 4px; z-index: 11; font-size: 12px; padding: 5px 10px; }
   }
 </style>
@@ -508,7 +520,7 @@
 
   <main>
     <section id="game-area" aria-label="Treasure Row board">
-      <div id="message">Drag the coin to a column</div>
+      <div id="message"></div>
       <div id="board"></div>
     </section>
   </main>
@@ -557,6 +569,7 @@
   let dragging = false;
   let ghost = null;
   let dragPointerId = null;
+  let messageTimer = null;
 
   function coinClass(player) {
     return player === GOLD ? 'gold' : 'silver';
@@ -588,7 +601,7 @@
     modal.classList.remove('open');
     buildBoard();
     updateTurnUI();
-    setMessage('Drag the coin to a column');
+    showMessage(`${playerName(currentPlayer)} to move`);
   }
 
   function updateTurnUI() {
@@ -600,8 +613,15 @@
     coinHolder.classList.toggle('disabled', gameOver || isAnimating);
   }
 
-  function setMessage(text) {
+  function showMessage(text, duration = 1200) {
     message.textContent = text;
+    message.classList.add('show');
+    if (messageTimer) clearTimeout(messageTimer);
+    if (duration > 0) {
+      messageTimer = setTimeout(() => {
+        message.classList.remove('show');
+      }, duration);
+    }
   }
 
   function getCell(row, col) {
@@ -654,7 +674,7 @@
     if (gameOver || isAnimating) return;
     const row = getOpenRow(col);
     if (row === -1) {
-      setMessage('That column is full');
+      showMessage('That column is full', 900);
       return;
     }
     isAnimating = true;
@@ -690,7 +710,7 @@
       currentPlayer = currentPlayer === GOLD ? SILVER : GOLD;
       isAnimating = false;
       updateTurnUI();
-      setMessage(`${playerName(currentPlayer)} to move`);
+      showMessage(`${playerName(currentPlayer)} to move`);
     }, { once: true });
   }
 
@@ -729,7 +749,7 @@
     updateTurnUI();
     cells.forEach(([r, c]) => renderCoin(r, c, player, true));
     const winner = playerName(player);
-    setMessage(`${winner} wins!`);
+    showMessage(`${winner} wins!`, 1600);
     resultTitle.textContent = `${winner} wins!`;
     resultText.textContent = 'Play a new game?';
     setTimeout(() => modal.classList.add('open'), 850);
@@ -739,7 +759,7 @@
     gameOver = true;
     isAnimating = false;
     updateTurnUI();
-    setMessage('The board is full');
+    showMessage('The board is full', 1200);
     resultTitle.textContent = 'A split treasure!';
     resultText.textContent = 'Play a new game?';
     setTimeout(() => modal.classList.add('open'), 450);
