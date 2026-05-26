@@ -353,15 +353,6 @@
     border-radius: 8px;
   }
 
-  .card-back::before {
-    content: "★";
-    position: relative;
-    z-index: 1;
-    font: 800 clamp(30px, 7vw, 58px) "Baloo 2", "Fredoka", sans-serif;
-    color: #fff;
-    text-shadow: 0 4px 0 rgba(38, 50, 95, 0.22);
-  }
-
   .card-front {
     transform: rotateY(180deg);
     background:
@@ -438,6 +429,93 @@
 
   body.won .win-overlay {
     display: flex;
+  }
+
+  .home-button {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: calc(env(safe-area-inset-right) + 10px);
+    z-index: 35;
+    border: 3px solid #fff;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font: 800 14px "Baloo 2", "Fredoka", sans-serif;
+    color: #26325f;
+    background: linear-gradient(180deg, #fff6a6, #ffd84d);
+    box-shadow: 0 4px 0 #d89b13, 0 10px 16px rgba(38, 50, 95, 0.2);
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .home-button:hover,
+  .home-button:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 0 #d89b13, 0 12px 18px rgba(38, 50, 95, 0.24);
+    outline: none;
+  }
+
+  .home-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #d89b13, 0 7px 12px rgba(38, 50, 95, 0.2);
+  }
+
+  .exit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(38, 50, 95, 0.42);
+    backdrop-filter: blur(4px);
+  }
+
+  .exit-modal.open {
+    display: flex;
+  }
+
+  .exit-dialog {
+    width: min(360px, 94vw);
+    border-radius: 16px;
+    border: 4px solid #fff;
+    background: linear-gradient(180deg, #fff9d8, #fff2b7);
+    color: #26325f;
+    text-align: center;
+    padding: 20px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  }
+
+  .exit-dialog h2 {
+    margin: 0;
+    font-family: "Baloo 2", "Fredoka", sans-serif;
+    font-size: clamp(24px, 5vw, 30px);
+    line-height: 1.1;
+  }
+
+  .exit-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .exit-actions button {
+    min-width: 96px;
+    border: 3px solid #fff;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font: 800 16px "Baloo 2", "Fredoka", sans-serif;
+    cursor: pointer;
+    color: #fff;
+  }
+
+  .exit-yes {
+    background: linear-gradient(180deg, #ff83b7, #ff5fa2);
+  }
+
+  .exit-no {
+    background: linear-gradient(180deg, #72cff8, #44bdf2);
   }
 
   .win-panel {
@@ -585,6 +663,18 @@
 </style>
 </head>
 <body>
+  <button type="button" class="home-button" id="home-button" aria-label="Exit game">Home</button>
+
+  <div class="exit-modal" id="exit-modal" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+    <div class="exit-dialog">
+      <h2 id="exit-title">Exit Game. Are you sure?</h2>
+      <div class="exit-actions">
+        <button type="button" class="exit-yes" id="exit-yes">Yes</button>
+        <button type="button" class="exit-no" id="exit-no">No</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header>
       <h1>Memory Game</h1>
@@ -655,7 +745,7 @@
   const objects = [
     { icon: "🍎", name: "apple" },
     { icon: "🚀", name: "rocket" },
-    { icon: "⭐", name: "star" },
+    { icon: "🚲", name: "bicycle" },
     { icon: "🎈", name: "balloon" },
     { icon: "🌈", name: "rainbow" },
     { icon: "⚽", name: "soccer ball" },
@@ -672,6 +762,10 @@
   ];
 
   const board = document.getElementById("board");
+  const homeButton = document.getElementById("home-button");
+  const exitModal = document.getElementById("exit-modal");
+  const exitYesButton = document.getElementById("exit-yes");
+  const exitNoButton = document.getElementById("exit-no");
   const startButton = document.getElementById("startButton");
   const restartButton = document.getElementById("restartButton");
   const cancelButton = document.getElementById("cancelButton");
@@ -873,6 +967,25 @@
 
   startButton.addEventListener("click", () => startGame(selectedMode));
   restartButton.addEventListener("click", () => startGame(winSelectedMode));
+  homeButton.addEventListener("click", () => {
+    exitModal.classList.add("open");
+  });
+  exitNoButton.addEventListener("click", () => {
+    exitModal.classList.remove("open");
+  });
+  exitModal.addEventListener("click", (event) => {
+    if (event.target === exitModal) {
+      exitModal.classList.remove("open");
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && exitModal.classList.contains("open")) {
+      exitModal.classList.remove("open");
+    }
+  });
+  exitYesButton.addEventListener("click", () => {
+    window.location.href = "https://sodigames.com";
+  });
   cancelButton.addEventListener("click", () => {
     window.location.href = "https://sodigames.com";
   });

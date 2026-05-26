@@ -156,6 +156,82 @@
   @keyframes fall {
     to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
   }
+
+  .home-button {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: calc(env(safe-area-inset-right) + 10px);
+    z-index: 24;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    color: #2c3e50;
+    background: linear-gradient(180deg, #fff6a6, #ffd93d);
+    box-shadow: 0 4px 0 #c58f11, 0 8px 12px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .home-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #c58f11, 0 6px 10px rgba(0,0,0,0.2);
+  }
+
+  .exit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,0.48);
+    backdrop-filter: blur(3px);
+  }
+
+  .exit-modal.open { display: flex; }
+
+  .exit-dialog {
+    width: min(360px, 92vw);
+    border-radius: 14px;
+    border: 4px solid #fff;
+    padding: 22px;
+    background: linear-gradient(180deg, #fff9db, #ffe7a8);
+    text-align: center;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.34);
+  }
+
+  .exit-dialog h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: clamp(24px, 5vw, 30px);
+    line-height: 1.15;
+  }
+
+  .exit-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .exit-actions button {
+    min-width: 94px;
+    border: 3px solid #fff;
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .exit-yes { background: linear-gradient(180deg, #ff6b9d, #c2185b); }
+  .exit-no { background: linear-gradient(180deg, #4ecdc4, #00897b); }
+
   /* Landscape on short screens: keep pictures stacked but tighten header */
   @media (orientation: landscape) and (max-height: 600px) {
     header { padding: 4px 12px 2px; }
@@ -167,6 +243,18 @@
 </style>
 </head>
 <body>
+  <button type="button" class="home-button" id="home-button" aria-label="Exit game">Home</button>
+
+  <div class="exit-modal" id="exit-modal" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+    <div class="exit-dialog">
+      <h2 id="exit-title">Exit Game. Are you sure?</h2>
+      <div class="exit-actions">
+        <button type="button" class="exit-yes" id="exit-yes">Yes</button>
+        <button type="button" class="exit-no" id="exit-no">No</button>
+      </div>
+    </div>
+  </div>
+
   <header>
     <h1>Can you spot the 5 differences between the two pictures?</h1>
     <div class="subheader">Click on the differences in the bottom picture</div>
@@ -400,5 +488,29 @@ const SCENES = [{"id":"sunny-park","title":"Sunny Park","width":800,"height":500
   start();
 })();
 </script>
+  <script>
+  (() => {
+    const homeButton = document.getElementById('home-button');
+    const exitModal = document.getElementById('exit-modal');
+    const exitYes = document.getElementById('exit-yes');
+    const exitNo = document.getElementById('exit-no');
+
+    homeButton.addEventListener('click', () => exitModal.classList.add('open'));
+    exitNo.addEventListener('click', () => exitModal.classList.remove('open'));
+    exitYes.addEventListener('click', () => {
+      window.location.href = 'https://sodigames.com';
+    });
+
+    exitModal.addEventListener('click', (event) => {
+      if (event.target === exitModal) exitModal.classList.remove('open');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && exitModal.classList.contains('open')) {
+        exitModal.classList.remove('open');
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

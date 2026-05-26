@@ -453,6 +453,83 @@
   .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .modal .no { background: linear-gradient(180deg, #e7edf2, #aab4bf); box-shadow: 0 4px 0 #606b76; }
 
+  button.home-button {
+    all: unset;
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: calc(env(safe-area-inset-right) + 10px);
+    z-index: 140;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font: 800 13px system-ui, -apple-system, sans-serif;
+    color: #201103;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    box-shadow: 0 4px 0 var(--gold-dark), 0 8px 14px rgba(0,0,0,0.25);
+    cursor: pointer;
+  }
+
+  button.home-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--gold-dark), 0 5px 10px rgba(0,0,0,0.22);
+  }
+
+  .exit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0,0,0,0.56);
+    backdrop-filter: blur(3px);
+  }
+
+  .exit-modal.open { display: flex; }
+
+  .exit-dialog {
+    width: min(360px, 92vw);
+    border-radius: 16px;
+    border: 4px solid var(--wood-dark);
+    background: var(--parchment);
+    color: #2a1604;
+    text-align: center;
+    padding: 22px;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.5);
+  }
+
+  .exit-dialog h2 {
+    margin: 0;
+    font-family: Georgia, serif;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.1;
+  }
+
+  .exit-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .exit-actions button {
+    border: 0;
+    border-radius: 10px;
+    padding: 9px 16px;
+    font: 800 15px system-ui, -apple-system, sans-serif;
+    color: #201103;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    box-shadow: 0 4px 0 var(--gold-dark), 0 8px 14px rgba(0,0,0,0.25);
+    cursor: pointer;
+    min-width: 96px;
+  }
+
+  .exit-actions .exit-no {
+    background: linear-gradient(180deg, #e7edf2, #aab4bf);
+    box-shadow: 0 4px 0 #606b76;
+  }
+
   @media (pointer: coarse) and (orientation: landscape) {
     #app { grid-template-columns: minmax(180px, 210px) 1fr; gap: 6px; padding: 8px 10px; }
     h1 { font-size: 28px; }
@@ -471,6 +548,18 @@
 </style>
 </head>
 <body>
+<button type="button" class="home-button" id="home-button" aria-label="Exit game">Home</button>
+
+<div class="exit-modal" id="exit-modal" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+  <div class="exit-dialog">
+    <h2 id="exit-title">Exit Game. Are you sure?</h2>
+    <div class="exit-actions">
+      <button type="button" class="exit-yes" id="exit-yes">Yes</button>
+      <button type="button" class="exit-no" id="exit-no">No</button>
+    </div>
+  </div>
+</div>
+
 <div id="rotate-gate" aria-hidden="true">
   <div class="rotate-card">
     <div class="rotate-icon"></div>
@@ -843,6 +932,30 @@
   buildBoard();
   resetGame();
   updateRotateGate();
+})();
+</script>
+<script>
+(() => {
+  const homeButton = document.getElementById('home-button');
+  const exitModal = document.getElementById('exit-modal');
+  const exitYes = document.getElementById('exit-yes');
+  const exitNo = document.getElementById('exit-no');
+
+  homeButton.addEventListener('click', () => exitModal.classList.add('open'));
+  exitNo.addEventListener('click', () => exitModal.classList.remove('open'));
+  exitYes.addEventListener('click', () => {
+    window.location.href = 'https://sodigames.com';
+  });
+
+  exitModal.addEventListener('click', (event) => {
+    if (event.target === exitModal) exitModal.classList.remove('open');
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && exitModal.classList.contains('open')) {
+      exitModal.classList.remove('open');
+    }
+  });
 })();
 </script>
 </body>
