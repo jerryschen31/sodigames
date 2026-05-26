@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Memory Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #26325f;
+    --pink: #ff5fa2;
+    --blue: #44bdf2;
+    --green: #61d66d;
+    --yellow: #ffd84d;
+    --orange: #ff9450;
+    --purple: #9b7bff;
+    --grid-gap: clamp(8px, 2vw, 14px);
+    --card-width: 118px;
+    --card-height: 157px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html,
+  body {
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: "Fredoka", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      linear-gradient(45deg, rgba(255, 255, 255, 0.35) 25%, transparent 25%) 0 0 / 34px 34px,
+      linear-gradient(-45deg, rgba(255, 255, 255, 0.32) 25%, transparent 25%) 0 17px / 34px 34px,
+      linear-gradient(135deg, #b9f0ff 0%, #fff0a8 34%, #ffc2de 68%, #c9f7ba 100%);
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(45deg, transparent 47%, rgba(255, 95, 162, 0.24) 48% 52%, transparent 53%),
+      linear-gradient(-45deg, transparent 47%, rgba(68, 189, 242, 0.22) 48% 52%, transparent 53%),
+      linear-gradient(90deg, transparent 47%, rgba(255, 216, 77, 0.28) 48% 52%, transparent 53%);
+    background-size: 130px 130px, 160px 160px, 190px 190px;
+    opacity: 0.65;
+    z-index: 0;
+  }
+
+  body::after {
+    animation: pattern-drift 24s linear infinite;
+    opacity: 0.32;
+  }
+
+  @keyframes pattern-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(48px, 32px, 0); }
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 1080px);
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  body.playing .app {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding-top: clamp(10px, 3vw, 32px);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: "Baloo 2", "Fredoka", sans-serif;
+    font-size: clamp(42px, 9vw, 82px);
+    line-height: 0.95;
+    color: #fff;
+    letter-spacing: 0;
+    text-shadow:
+      0 5px 0 var(--pink),
+      0 10px 0 rgba(38, 50, 95, 0.18),
+      0 18px 28px rgba(38, 50, 95, 0.25);
+    transform: rotate(-1.4deg);
+  }
+
+  .setup-panel,
+  .game-shell,
+  .win-panel {
+    width: min(100%, 760px);
+    background: rgba(255, 255, 255, 0.9);
+    border: 4px solid #fff;
+    border-radius: 8px;
+    box-shadow:
+      0 8px 0 rgba(38, 50, 95, 0.13),
+      0 24px 46px rgba(38, 50, 95, 0.22);
+  }
+
+  .setup-panel {
+    padding: clamp(18px, 4vw, 32px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .difficulty-pill {
+    width: min(100%, 430px);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    padding: 6px;
+    background: #26325f;
+    border: 4px solid #fff;
+    border-radius: 999px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
+
+  .difficulty-pill button {
+    min-height: 46px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #fff;
+    font: 800 clamp(15px, 3vw, 19px) "Baloo 2", "Fredoka", sans-serif;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .difficulty-pill button:hover,
+  .difficulty-pill button:focus-visible {
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  .difficulty-pill button[aria-pressed="true"] {
+    color: var(--ink);
+    background: linear-gradient(180deg, #fff6a6, var(--yellow));
+    box-shadow: 0 4px 0 #d89b13;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-width: 150px;
+    border: 4px solid #fff;
+    border-radius: 999px;
+    padding: 12px 24px;
+    font: 800 20px "Baloo 2", "Fredoka", sans-serif;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(38, 50, 95, 0.2), 0 12px 20px rgba(38, 50, 95, 0.2);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .primary-button {
+    background: linear-gradient(180deg, #ff83b7, var(--pink));
+  }
+
+  .secondary-button {
+    background: linear-gradient(180deg, #72cff8, var(--blue));
+  }
+
+  .primary-button:hover,
+  .primary-button:focus-visible,
+  .secondary-button:hover,
+  .secondary-button:focus-visible {
+    transform: translateY(-2px) scale(1.02);
+    outline: none;
+    box-shadow: 0 8px 0 rgba(38, 50, 95, 0.2), 0 16px 24px rgba(38, 50, 95, 0.24);
+  }
+
+  .primary-button:active,
+  .secondary-button:active {
+    transform: translateY(2px) scale(0.98);
+    box-shadow: 0 3px 0 rgba(38, 50, 95, 0.2), 0 8px 14px rgba(38, 50, 95, 0.2);
+  }
+
+  .game-shell {
+    display: none;
+    padding: clamp(12px, 3vw, 22px);
+    gap: 14px;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  body.playing .setup-panel {
+    display: none;
+  }
+
+  body.playing .game-shell {
+    display: flex;
+    min-height: 0;
+  }
+
+  @media (orientation: landscape) {
+    body.playing .game-shell {
+      width: min(100%, 940px);
+    }
+  }
+
+  .game-topbar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .stat-badge,
+  .win-question {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 3px solid #fff;
+    padding: 8px 16px;
+    font-weight: 800;
+    box-shadow: 0 4px 0 rgba(38, 50, 95, 0.13);
+  }
+
+  .stat-badge {
+    background: #fff6a6;
+  }
+
+  .win-question {
+    min-width: 196px;
+    background: #fff;
+    color: var(--ink);
+  }
+
+  @keyframes happy-bounce {
+    0% { transform: scale(1); }
+    38% { transform: scale(1.08) rotate(-1deg); }
+    70% { transform: scale(0.98) rotate(1deg); }
+    100% { transform: scale(1); }
+  }
+
+  .board-wrap {
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .board {
+    width: calc((var(--columns) * var(--card-width)) + ((var(--columns) - 1) * var(--grid-gap)));
+    display: grid;
+    grid-template-columns: repeat(var(--columns), var(--card-width));
+    grid-auto-rows: var(--card-height);
+    gap: var(--grid-gap);
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .memory-card {
+    appearance: none;
+    width: var(--card-width);
+    height: var(--card-height);
+    padding: 0;
+    border: 0;
+    border-radius: 13px;
+    background: transparent;
+    cursor: pointer;
+    perspective: 900px;
+    touch-action: manipulation;
+    filter: drop-shadow(0 10px 10px rgba(38, 50, 95, 0.18));
+    transition: transform 0.18s ease, filter 0.18s ease;
+  }
+
+  .memory-card:hover:not(:disabled),
+  .memory-card:focus-visible {
+    transform: translateY(-3px) rotate(-1deg);
+    filter: drop-shadow(0 14px 14px rgba(38, 50, 95, 0.24));
+  }
+
+  .memory-card:focus-visible {
+    outline: 4px solid #fff;
+    outline-offset: 4px;
+  }
+
+  .memory-card:disabled {
+    cursor: default;
+  }
+
+  .card-inner {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.62s cubic-bezier(0.16, 0.86, 0.24, 1.16);
+  }
+
+  .memory-card.flipped .card-inner,
+  .memory-card.matched .card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border: 5px solid #fff;
+    box-shadow:
+      inset 0 0 0 3px rgba(38, 50, 95, 0.13),
+      0 7px 0 rgba(38, 50, 95, 0.18),
+      0 14px 18px rgba(38, 50, 95, 0.14);
+  }
+
+  .card-back {
+    background:
+      radial-gradient(circle at 22% 20%, #fff 0 7px, transparent 8px),
+      radial-gradient(circle at 78% 78%, #fff 0 7px, transparent 8px),
+      linear-gradient(45deg, rgba(255, 255, 255, 0.32) 25%, transparent 25%) 0 0 / 20px 20px,
+      linear-gradient(-45deg, rgba(255, 255, 255, 0.26) 25%, transparent 25%) 0 10px / 20px 20px,
+      linear-gradient(160deg, #ff5fa2, #9b7bff 55%, #44bdf2);
+  }
+
+  .card-back::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 3px dashed rgba(255, 255, 255, 0.82);
+    border-radius: 8px;
+  }
+
+  .card-back::before {
+    content: "★";
+    position: relative;
+    z-index: 1;
+    font: 800 clamp(30px, 7vw, 58px) "Baloo 2", "Fredoka", sans-serif;
+    color: #fff;
+    text-shadow: 0 4px 0 rgba(38, 50, 95, 0.22);
+  }
+
+  .card-front {
+    transform: rotateY(180deg);
+    background:
+      radial-gradient(circle at 16% 14%, #ffd84d 0 6px, transparent 7px),
+      radial-gradient(circle at 84% 86%, #ff9bc3 0 6px, transparent 7px),
+      linear-gradient(180deg, #fffef7, #fff3cc);
+    font-size: clamp(36px, 8vw, 64px);
+  }
+
+  .card-front::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 2px solid rgba(38, 50, 95, 0.12);
+    border-radius: 8px;
+  }
+
+  .card-front .card-icon {
+    position: relative;
+    z-index: 1;
+    display: block;
+    transform: scale(1);
+    transition: transform 0.25s ease;
+  }
+
+  .memory-card.flipped .card-front .card-icon,
+  .memory-card.matched .card-front .card-icon {
+    transform: scale(1.08);
+  }
+
+  .memory-card.matched .card-face {
+    border-color: #fff6a6;
+  }
+
+  .memory-card.sparkle .card-inner::before,
+  .memory-card.sparkle .card-inner::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 18px;
+    background:
+      linear-gradient(45deg, transparent 45%, #fff 47% 53%, transparent 55%) 8% 12% / 18px 18px no-repeat,
+      linear-gradient(-45deg, transparent 45%, #ffd84d 47% 53%, transparent 55%) 84% 18% / 22px 22px no-repeat,
+      linear-gradient(90deg, transparent 45%, #ff5fa2 47% 53%, transparent 55%) 16% 86% / 20px 20px no-repeat,
+      linear-gradient(0deg, transparent 45%, #61d66d 47% 53%, transparent 55%) 90% 82% / 18px 18px no-repeat;
+    pointer-events: none;
+    transform: rotateY(180deg) scale(0.65);
+    animation: sparkle-pop 0.7s ease-out both;
+    z-index: 2;
+  }
+
+  .memory-card.sparkle .card-inner::after {
+    animation-delay: 0.08s;
+    transform: rotateY(180deg) scale(0.48) rotate(20deg);
+  }
+
+  @keyframes sparkle-pop {
+    0% { opacity: 0; transform: rotateY(180deg) scale(0.45); }
+    35% { opacity: 1; }
+    100% { opacity: 0; transform: rotateY(180deg) scale(1.22); }
+  }
+
+  .win-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(38, 50, 95, 0.32);
+    backdrop-filter: blur(4px);
+  }
+
+  body.won .win-overlay {
+    display: flex;
+  }
+
+  .win-panel {
+    max-width: 560px;
+    padding: clamp(18px, 4vw, 28px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    animation: panel-in 0.36s ease-out both;
+  }
+
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .win-panel h2 {
+    margin: 0;
+    font-family: "Baloo 2", "Fredoka", sans-serif;
+    font-size: clamp(34px, 8vw, 54px);
+    line-height: 1;
+    color: #ff4f94;
+    text-shadow: 0 3px 0 #fff6a6;
+  }
+
+  .win-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  @media (max-width: 740px) {
+    .app {
+      padding-inline: 10px;
+    }
+
+    .game-shell {
+      width: 100%;
+      padding: 10px;
+      gap: 10px;
+    }
+
+    body.playing .app {
+      gap: 10px;
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    body.playing header {
+      padding-top: 0;
+    }
+
+    body.playing h1 {
+      font-size: clamp(32px, 8vw, 52px);
+    }
+
+    .card-face {
+      border-width: 3px;
+      box-shadow: 0 4px 0 rgba(38, 50, 95, 0.15), 0 8px 12px rgba(38, 50, 95, 0.16);
+    }
+  }
+
+  @media (orientation: landscape) and (max-height: 520px) {
+    body.playing .app {
+      gap: 8px;
+      padding-top: max(6px, env(safe-area-inset-top));
+      padding-bottom: max(6px, env(safe-area-inset-bottom));
+    }
+
+    body.playing header {
+      padding-top: 0;
+    }
+
+    body.playing h1 {
+      font-size: clamp(28px, 8vh, 40px);
+      text-shadow:
+        0 3px 0 var(--pink),
+        0 6px 0 rgba(38, 50, 95, 0.16),
+        0 10px 18px rgba(38, 50, 95, 0.22);
+    }
+
+    body.playing .game-shell {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    body.playing .game-topbar {
+      gap: 8px;
+    }
+
+    body.playing .stat-badge {
+      min-height: 32px;
+      padding: 5px 12px;
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .difficulty-pill {
+      gap: 3px;
+      padding: 4px;
+    }
+
+    .difficulty-pill button {
+      min-height: 40px;
+      font-size: 14px;
+    }
+
+    .primary-button,
+    .secondary-button {
+      min-width: 128px;
+      font-size: 18px;
+      padding-inline: 18px;
+    }
+
+    .game-topbar {
+      gap: 8px;
+    }
+
+    .stat-badge,
+    .win-question {
+      min-height: 38px;
+      padding: 7px 12px;
+      font-size: 15px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Memory Game</h1>
+    </header>
+
+    <section class="setup-panel" aria-label="Start menu">
+      <div class="difficulty-pill" role="group" aria-label="Choose difficulty">
+        <button type="button" data-mode="easy" aria-pressed="true">Easy</button>
+        <button type="button" data-mode="medium" aria-pressed="false">Medium</button>
+        <button type="button" data-mode="hard" aria-pressed="false">Hard</button>
+      </div>
+      <button class="primary-button" type="button" id="startButton">Start Game</button>
+    </section>
+
+    <main class="game-shell" aria-label="Memory card board">
+      <div class="game-topbar">
+        <div class="stat-badge" id="difficultyBadge">Easy</div>
+        <div class="stat-badge" id="movesBadge">Moves: 0</div>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="win-overlay" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <section class="win-panel">
+      <h2 id="winTitle">Congratulations!</h2>
+      <div class="win-question">Play a new game?</div>
+      <div class="difficulty-pill" role="group" aria-label="Choose new game difficulty">
+        <button type="button" data-win-mode="easy" aria-pressed="true">Easy</button>
+        <button type="button" data-win-mode="medium" aria-pressed="false">Medium</button>
+        <button type="button" data-win-mode="hard" aria-pressed="false">Hard</button>
+      </div>
+      <div class="win-actions">
+        <button class="primary-button" type="button" id="restartButton">Start</button>
+        <button class="secondary-button" type="button" id="cancelButton">Cancel</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const modes = {
+    easy: {
+      label: "Easy",
+      layouts: {
+        portrait: { columns: 2, rows: 3 },
+        landscape: { columns: 3, rows: 2 }
+      }
+    },
+    medium: {
+      label: "Medium",
+      layouts: {
+        portrait: { columns: 3, rows: 4 },
+        landscape: { columns: 4, rows: 3 }
+      }
+    },
+    hard: {
+      label: "Hard",
+      layouts: {
+        portrait: { columns: 4, rows: 6 },
+        landscape: { columns: 6, rows: 4 }
+      }
+    }
+  };
+
+  const objects = [
+    { icon: "🍎", name: "apple" },
+    { icon: "🚀", name: "rocket" },
+    { icon: "⭐", name: "star" },
+    { icon: "🎈", name: "balloon" },
+    { icon: "🌈", name: "rainbow" },
+    { icon: "⚽", name: "soccer ball" },
+    { icon: "🧸", name: "teddy bear" },
+    { icon: "🎨", name: "paint palette" },
+    { icon: "🍓", name: "strawberry" },
+    { icon: "🦋", name: "butterfly" },
+    { icon: "🎁", name: "present" },
+    { icon: "☀️", name: "sun" },
+    { icon: "🍩", name: "donut" },
+    { icon: "🎵", name: "music note" },
+    { icon: "🧩", name: "puzzle piece" },
+    { icon: "🏀", name: "basketball" }
+  ];
+
+  const board = document.getElementById("board");
+  const startButton = document.getElementById("startButton");
+  const restartButton = document.getElementById("restartButton");
+  const cancelButton = document.getElementById("cancelButton");
+  const movesBadge = document.getElementById("movesBadge");
+  const difficultyBadge = document.getElementById("difficultyBadge");
+  const gameShell = document.querySelector(".game-shell");
+  const setupModeButtons = [...document.querySelectorAll("[data-mode]")];
+  const winModeButtons = [...document.querySelectorAll("[data-win-mode]")];
+
+  let selectedMode = "easy";
+  let winSelectedMode = "easy";
+  let firstCard = null;
+  let secondCard = null;
+  let lockBoard = false;
+  let moves = 0;
+  let matches = 0;
+  let layoutFrame = 0;
+
+  function setPressed(buttons, attribute, mode) {
+    buttons.forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset[attribute] === mode));
+    });
+  }
+
+  function shuffle(items) {
+    const shuffled = [...items];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    }
+    return shuffled;
+  }
+
+  function getOrientation() {
+    return window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+  }
+
+  function getLayout(mode) {
+    return modes[mode].layouts[getOrientation()];
+  }
+
+  function getCardCount(mode) {
+    const { columns, rows } = modes[mode].layouts.portrait;
+    return columns * rows;
+  }
+
+  function applyBoardLayout(mode) {
+    const { columns, rows } = getLayout(mode);
+    board.style.setProperty("--columns", columns);
+    board.style.setProperty("--rows", rows);
+    board.setAttribute("aria-label", `${modes[mode].label} memory board with ${columns} columns and ${rows} rows`);
+  }
+
+  function fitBoardToViewport() {
+    if (!document.body.classList.contains("playing")) return;
+
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = requestAnimationFrame(() => {
+      applyBoardLayout(selectedMode);
+
+      const { columns, rows } = getLayout(selectedMode);
+      const viewportWidth = window.visualViewport?.width || window.innerWidth;
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const shellRect = gameShell.getBoundingClientRect();
+      const boardRect = board.getBoundingClientRect();
+      const shellStyle = getComputedStyle(gameShell);
+      const boardStyle = getComputedStyle(board);
+      const gap = parseFloat(boardStyle.columnGap) || 10;
+      const horizontalPadding = parseFloat(shellStyle.paddingLeft) + parseFloat(shellStyle.paddingRight);
+      const availableWidth = Math.max(120, Math.min(shellRect.width - horizontalPadding, viewportWidth - 20));
+      const availableHeight = Math.max(120, viewportHeight - boardRect.top - 14);
+      const widthFromSpace = (availableWidth - gap * (columns - 1)) / columns;
+      const heightFromSpace = (availableHeight - gap * (rows - 1)) / rows;
+      const cardHeight = Math.max(42, Math.min(157, heightFromSpace, widthFromSpace * 4 / 3));
+      const cardWidth = Math.max(32, Math.min(118, widthFromSpace, cardHeight * 3 / 4));
+
+      board.style.setProperty("--card-width", `${Math.floor(cardWidth)}px`);
+      board.style.setProperty("--card-height", `${Math.floor(cardHeight)}px`);
+    });
+  }
+
+  function createDeck(mode) {
+    const cardCount = getCardCount(mode);
+    const pairCount = cardCount / 2;
+    const chosenObjects = shuffle(objects).slice(0, pairCount);
+    return shuffle(chosenObjects.flatMap((object, pairIndex) => [
+      { ...object, pairId: pairIndex, cardId: `${pairIndex}-a` },
+      { ...object, pairId: pairIndex, cardId: `${pairIndex}-b` }
+    ]));
+  }
+
+  function renderBoard(deck, mode) {
+    applyBoardLayout(mode);
+    board.innerHTML = deck.map((card, index) => `
+      <button class="memory-card" type="button" data-pair="${card.pairId}" data-card="${card.cardId}" aria-label="Card ${index + 1}">
+        <span class="card-inner">
+          <span class="card-face card-back" aria-hidden="true"></span>
+          <span class="card-face card-front" aria-hidden="true"><span class="card-icon">${card.icon}</span></span>
+        </span>
+      </button>
+    `).join("");
+    fitBoardToViewport();
+  }
+
+  function updateBadges(mode) {
+    difficultyBadge.textContent = modes[mode].label;
+    movesBadge.textContent = `Moves: ${moves}`;
+  }
+
+  function startGame(mode) {
+    selectedMode = mode;
+    winSelectedMode = mode;
+    firstCard = null;
+    secondCard = null;
+    lockBoard = false;
+    moves = 0;
+    matches = 0;
+    document.body.classList.remove("won");
+    document.body.classList.add("playing");
+    setPressed(setupModeButtons, "mode", selectedMode);
+    setPressed(winModeButtons, "winMode", winSelectedMode);
+    updateBadges(mode);
+    renderBoard(createDeck(mode), mode);
+  }
+
+  function clearSelection() {
+    firstCard = null;
+    secondCard = null;
+    lockBoard = false;
+  }
+
+  function markMatched(cardA, cardB) {
+    cardA.classList.add("matched", "sparkle");
+    cardB.classList.add("matched", "sparkle");
+    cardA.disabled = true;
+    cardB.disabled = true;
+    matches += 1;
+    setTimeout(() => {
+      cardA.classList.remove("sparkle");
+      cardB.classList.remove("sparkle");
+    }, 760);
+  }
+
+  function finishGameIfComplete() {
+    const totalPairs = getCardCount(selectedMode) / 2;
+    if (matches !== totalPairs) return;
+
+    setTimeout(() => {
+      document.body.classList.add("won");
+      restartButton.focus();
+    }, 650);
+  }
+
+  function handleCardClick(event) {
+    const card = event.target.closest(".memory-card");
+    if (!card || lockBoard || card === firstCard || card.classList.contains("matched")) return;
+
+    card.classList.add("flipped");
+
+    if (!firstCard) {
+      firstCard = card;
+      return;
+    }
+
+    secondCard = card;
+    moves += 1;
+    movesBadge.textContent = `Moves: ${moves}`;
+    lockBoard = true;
+
+    if (firstCard.dataset.pair === secondCard.dataset.pair) {
+      markMatched(firstCard, secondCard);
+      setTimeout(() => {
+        clearSelection();
+        finishGameIfComplete();
+      }, 560);
+      return;
+    }
+
+    setTimeout(() => {
+      firstCard.classList.remove("flipped");
+      secondCard.classList.remove("flipped");
+      clearSelection();
+    }, 900);
+  }
+
+  setupModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedMode = button.dataset.mode;
+      setPressed(setupModeButtons, "mode", selectedMode);
+    });
+  });
+
+  winModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      winSelectedMode = button.dataset.winMode;
+      setPressed(winModeButtons, "winMode", winSelectedMode);
+    });
+  });
+
+  startButton.addEventListener("click", () => startGame(selectedMode));
+  restartButton.addEventListener("click", () => startGame(winSelectedMode));
+  cancelButton.addEventListener("click", () => {
+    window.location.href = "https://sodigames.com";
+  });
+  board.addEventListener("click", handleCardClick);
+  window.addEventListener("resize", fitBoardToViewport);
+  window.addEventListener("orientationchange", fitBoardToViewport);
+  window.visualViewport?.addEventListener("resize", fitBoardToViewport);
+})();
+</script>
+</body>
+</html>
