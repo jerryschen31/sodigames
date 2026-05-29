@@ -110,6 +110,34 @@
   button:active { transform: translateY(0); }
   .final-score { font-size: 22px; }
   .final-score .high { color: #ffd93d; }
+  .difficulty-pill {
+    display: flex;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.25);
+    margin: 4px 0;
+  }
+  .difficulty-pill button {
+    background: rgba(255,255,255,0.08);
+    color: #e8e8f0;
+    border: none;
+    padding: 10px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 0;
+    cursor: pointer;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .difficulty-pill button:hover { transform: none; box-shadow: none; background: rgba(255,255,255,0.15); }
+  .difficulty-pill button:active { transform: none; }
+  .difficulty-pill button.active {
+    background: linear-gradient(180deg, #ff4757, #c0392b);
+    color: #fff;
+    font-weight: 700;
+  }
 </style>
 </head>
 <body>
@@ -137,6 +165,10 @@
       <div class="legend-item"><div class="swatch" style="background:#2ecc71;color:#2ecc71"></div>Civilian (–25 if shot, +1 life if rescued)</div>
     </div>
     <div class="final-score" id="final-score"></div>
+    <div class="difficulty-pill" id="difficulty-pill">
+      <button class="active" data-mode="normal">Normal</button>
+      <button data-mode="hard">Hard</button>
+    </div>
     <button id="start-btn">Start Game</button>
   </div>
 </div>
@@ -161,6 +193,20 @@
   // Lift the player away from the bottom edge on touch devices so iOS home-indicator
   // and Safari URL-bar gesture zones don't intercept taps near the base.
   const PLAYER_BOTTOM_OFFSET = IS_TOUCH ? 80 : 30;
+
+  // Difficulty mode
+  let difficulty = 'normal'; // 'normal' or 'hard'
+  const diffPill = document.getElementById('difficulty-pill');
+  diffPill.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    difficulty = btn.dataset.mode;
+    diffPill.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  function getMaxLives() { return difficulty === 'hard' ? 3 : MAX_LIVES; }
+  function getSpeedMultiplier() { return difficulty === 'hard' ? 1.25 : 1.0; }
 
   let W = 0, H = 0, DPR = 1, IS_PORTRAIT = false;
   function resize() {
@@ -192,7 +238,7 @@
     return {
       running: false,
       score: 0,
-      lives: MAX_LIVES,
+      lives: getMaxLives(),
       enemies: [],
       particles: [],
       floaters: [],
@@ -204,10 +250,15 @@
   }
 
   function pickType() {
-    const total = Object.values(ENEMY_TYPES).reduce((s, t) => s + t.weight, 0);
+    const weights = Object.entries(ENEMY_TYPES).map(([name, t]) => {
+      let w = t.weight;
+      if (difficulty === 'hard' && t.friendly) w = Math.round(w * 0.5);
+      return [name, t, w];
+    });
+    const total = weights.reduce((s, [,,w]) => s + w, 0);
     let r = Math.random() * total;
-    for (const [name, t] of Object.entries(ENEMY_TYPES)) {
-      if ((r -= t.weight) <= 0) return { name, ...t };
+    for (const [name, t, w] of weights) {
+      if ((r -= w) <= 0) return { name, ...t };
     }
     return { name: 'grunt', ...ENEMY_TYPES.grunt };
   }
@@ -240,7 +291,7 @@
     const dy = targetY - y;
     const dist = Math.hypot(dx, dy);
     // Per-frame speed scaled later by dt; this is px/sec base.
-    const speedPxSec = type.speed * (60 + Math.random() * 30);
+    const speedPxSec = type.speed * (60 + Math.random() * 30) * getSpeedMultiplier();
 
     const radius = type.baseRadius * SIZE_SCALE;
     state.enemies.push({
@@ -328,8 +379,9 @@
   }, { passive: false });
 
   function renderHearts() {
+    const maxLives = getMaxLives();
     const filled = Math.max(0, state.lives);
-    const empty = Math.max(0, MAX_LIVES - filled);
+    const empty = Math.max(0, maxLives - filled);
     heartsEl.textContent = '♥'.repeat(filled) + '♡'.repeat(empty);
   }
 
@@ -341,7 +393,7 @@
   }
 
   function gainLife() {
-    if (state.lives >= MAX_LIVES) return;
+    if (state.lives >= getMaxLives()) return;
     state.lives += 1;
     renderHearts();
     addFloater(W / 2, H - PLAYER_BOTTOM_OFFSET - 30, '+1 LIFE', '#2ecc71');
