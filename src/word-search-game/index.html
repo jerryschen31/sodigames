@@ -692,13 +692,29 @@ const PUZZLES = {"easy":[{"theme":"Animals","size":8,"grid":[["U","X","X","G","V
     const startCenter = getCellCenter(start[0], start[1]);
     const endCenter = getCellCenter(end[0], end[1]);
     if (!startCenter || !endCenter) return;
+    const sw = Math.max(6, startCenter.size * 0.72);
+    // Extend endpoints so the round caps fully cover the first and last cells.
+    // Round cap extends sw/2 past the endpoint; cell extends size/2 from center.
+    // Extend by (size/2 - sw/2) along the line direction.
+    const extend = (startCenter.size / 2) - (sw / 2);
+    let x1 = startCenter.x, y1 = startCenter.y;
+    let x2 = endCenter.x,   y2 = endCenter.y;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0.01) {
+      const ux = dx / len, uy = dy / len;
+      x1 -= ux * extend;
+      y1 -= uy * extend;
+      x2 += ux * extend;
+      y2 += uy * extend;
+    }
     const path = document.createElementNS(SVG_NS, 'line');
-    path.setAttribute('x1', startCenter.x);
-    path.setAttribute('y1', startCenter.y);
-    path.setAttribute('x2', endCenter.x);
-    path.setAttribute('y2', endCenter.y);
+    path.setAttribute('x1', x1);
+    path.setAttribute('y1', y1);
+    path.setAttribute('x2', x2);
+    path.setAttribute('y2', y2);
     path.setAttribute('stroke', color);
-    path.setAttribute('stroke-width', Math.max(6, startCenter.size * 0.72));
+    path.setAttribute('stroke-width', sw);
     path.setAttribute('class', 'found-line');
     overlayEl.appendChild(path);
   }
