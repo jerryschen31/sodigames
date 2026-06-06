@@ -390,29 +390,131 @@
         gap: 6px;
       }
 
+      /* Mobile compact stats bar (hidden on desktop) */
+      .mobile-stats {
+        display: none;
+      }
+
+      /* Side-column home button only appears on mobile */
+      .home-btn-side {
+        display: none;
+      }
+
       @media (max-width: 720px), (pointer: coarse) {
-        .play-area {
-          grid-template-columns: 1fr;
+        /* Force portrait */
+        @media (orientation: landscape) {
+          #app::after {
+            content: "Please rotate to portrait 📱";
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: var(--bg-1);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Baloo 2", sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            text-align: center;
+            padding: 24px;
+          }
         }
-        .side {
-          flex-direction: row;
-          flex-wrap: wrap;
-          min-width: 0;
-          width: 100%;
-          justify-content: center;
-        }
-        .panel {
-          flex: 1 1 80px;
-          padding: 6px 8px;
-        }
-        .panel .value {
-          font-size: 1.2rem;
-        }
-        .panel .label {
-          font-size: 0.6rem;
-        }
-        .touch {
+
+        /* Full-viewport stage layout */
+        #stage {
+          gap: 0;
+          padding: 0;
+          width: 100vw;
+          height: 100dvh;
           display: flex;
+          flex-direction: column;
+        }
+
+        /* Topbar: compact, just logo + home */
+        .topbar {
+          order: 2;
+          padding: 4px 8px;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .logo {
+          font-size: 1rem;
+          transform: none;
+        }
+        /* Hide the topbar home button; show the side-column one instead */
+        #home-btn-topbar {
+          display: none !important;
+        }
+        .home-btn-side {
+          display: flex !important;
+        }
+
+        /* On mobile the home button moves into the side column — undo fixed positioning */
+        .home-btn {
+          position: static;
+          padding: 5px 8px;
+          font-size: 1rem;
+          border-width: 2px;
+          border-radius: 10px;
+          box-shadow: 0 2px 0 #8d3b00, 0 3px 6px rgba(0,0,0,0.3);
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+        }
+
+        /* Play area: game canvas on left, side strip on right */
+        .play-area {
+          order: 1;
+          grid-template-columns: 1fr auto;
+          gap: 4px;
+          flex: 1 1 0;
+          min-height: 0;
+          align-items: stretch;
+          padding: 4px;
+        }
+
+        /* Side panel: narrow vertical strip — home btn is first child */
+        .side {
+          display: flex !important;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+          width: auto;
+          justify-content: flex-start;
+        }
+        .side .panel {
+          padding: 3px 6px;
+          border-radius: 8px;
+          border-width: 2px;
+        }
+        .side .panel .label {
+          font-size: 0.5rem;
+          letter-spacing: 1px;
+          margin-bottom: 1px;
+        }
+        .side .panel .value {
+          font-size: 0.85rem;
+        }
+        .side .panel.high .value {
+          font-size: 0.7rem;
+        }
+        .side .panel .next-wrap {
+          gap: 0;
+        }
+
+        canvas#game {
+          border-radius: 10px;
+        }
+
+        /* Hide touch buttons and mobile stats bar */
+        .touch {
+          display: none !important;
+        }
+        .mobile-stats {
+          display: none !important;
         }
       }
     </style>
@@ -420,14 +522,17 @@
   <body>
     <div id="app">
       <div id="stage">
-        <div class="topbar">
+        <div class="topbar" id="topbar">
           <div class="logo">Chomp Chomp</div>
-          <a class="home-btn" href="https://sodigames.com">🏠 Home</a>
+          <!-- home-btn also lives here for desktop; on mobile it's shown in .side via CSS order -->
+          <a class="home-btn" id="home-btn-topbar" href="https://sodigames.com">🏠</a>
         </div>
 
         <div class="play-area">
           <canvas id="game" width="360" height="660"></canvas>
           <div class="side">
+            <!-- mobile-only home button at top of side column -->
+            <a class="home-btn home-btn-side" href="https://sodigames.com">🏠</a>
             <div class="panel">
               <div class="label">Score</div>
               <div class="value" id="score">0</div>
@@ -451,6 +556,14 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="mobile-stats" id="mobile-stats">
+          <div class="ms-item"><span class="ms-label">SCR</span><span class="ms-val" id="m-score">0</span></div>
+          <div class="ms-item"><span class="ms-label">CMB</span><span class="ms-val combo" id="m-combo">0</span></div>
+          <div class="ms-item"><span class="ms-label">LVL</span><span class="ms-val level" id="m-level">1</span></div>
+          <div class="ms-item"><span class="ms-label">BST</span><span class="ms-val best" id="m-hi">0</span></div>
+          <div class="ms-next"><span class="ms-label">NXT</span><canvas id="m-next" width="40" height="80"></canvas></div>
         </div>
 
         <div class="touch" id="touch">
@@ -596,11 +709,18 @@
         const nextCanvas = document.getElementById("next");
         const nextCtx = nextCanvas.getContext("2d");
 
+        const mNextCanvas = document.getElementById("m-next");
+        const mNextCtx = mNextCanvas ? mNextCanvas.getContext("2d") : null;
+
         const ui = {
           score: document.getElementById("score"),
           combo: document.getElementById("combo"),
           level: document.getElementById("level"),
           hi: document.getElementById("hi"),
+          mScore: document.getElementById("m-score"),
+          mCombo: document.getElementById("m-combo"),
+          mLevel: document.getElementById("m-level"),
+          mHi: document.getElementById("m-hi"),
           menu: document.getElementById("menu"),
           pause: document.getElementById("pause"),
           over: document.getElementById("over"),
@@ -1158,29 +1278,44 @@
         }
 
         function resize() {
-          const stage = document.getElementById("stage");
-          const rect = stage.getBoundingClientRect();
           const isMobile = window.matchMedia("(pointer: coarse), (max-width: 720px)").matches;
+          const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
-          const sideH = isMobile ? 110 : 0;
-          const touchH = isMobile ? 92 : 0;
-          const topH = 56;
+          let cell;
+          if (isMobile) {
+            // Mobile layout: game + right sidebar + bottom logo bar
+            // Right sidebar ~56px, padding 4+4+4=12, logo bar ~30px
+            const sideW = 56;
+            const padH = 8;   // top + bottom padding in play-area
+            const logoH = 32; // bottom logo bar
+            const availW = window.innerWidth - sideW - 12;
+            const availH = window.innerHeight - logoH - padH;
+            cell = Math.min(
+              Math.floor(availW / COLS),
+              Math.floor(availH / ROWS)
+            );
+            cell = Math.max(20, cell);
 
-          const availW = Math.min(window.innerWidth - 24, isMobile ? 480 : 560);
-          const availH =
-            window.innerHeight - topH - sideH - touchH - 36;
-
-          // We need cell * COLS <= availW, cell * ROWS <= availH
-          let cell = Math.min(
-            Math.floor(availW / (isMobile ? COLS : COLS + 2.6)),
-            Math.floor(availH / ROWS)
-          );
-          cell = Math.max(24, Math.min(cell, 60));
+            // Size the next preview to fit the sidebar width
+            const nc = Math.min(Math.max(Math.floor(sideW * 0.75), 32), 44);
+            nextCanvas.width = Math.round(nc * dpr);
+            nextCanvas.height = Math.round(nc * 2 * dpr);
+            nextCanvas.style.width = nc + "px";
+            nextCanvas.style.height = nc * 2 + "px";
+            nextCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          } else {
+            const availW = Math.min(window.innerWidth - 24, 560);
+            const availH = window.innerHeight - 56 - 36;
+            cell = Math.min(
+              Math.floor(availW / (COLS + 2.6)),
+              Math.floor(availH / ROWS)
+            );
+            cell = Math.max(24, Math.min(cell, 60));
+          }
 
           const boardW = cell * COLS;
           const boardH = cell * ROWS;
 
-          const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
           canvas.width = boardW * dpr;
           canvas.height = boardH * dpr;
           canvas.style.width = boardW + "px";
@@ -1193,13 +1328,25 @@
           Game._boardW = boardW;
           Game._boardH = boardH;
 
-          // Next preview canvas — keep cells large enough for emoji to render clearly
-          const nc = Math.min(Math.max(cell, 52), 72);
-          nextCanvas.width = Math.round(nc * dpr);
-          nextCanvas.height = Math.round(nc * 2 * dpr);
-          nextCanvas.style.width = nc + "px";
-          nextCanvas.style.height = nc * 2 + "px";
-          nextCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          if (!isMobile) {
+            // Desktop next preview canvas
+            const nc = Math.min(Math.max(cell, 52), 72);
+            nextCanvas.width = Math.round(nc * dpr);
+            nextCanvas.height = Math.round(nc * 2 * dpr);
+            nextCanvas.style.width = nc + "px";
+            nextCanvas.style.height = nc * 2 + "px";
+            nextCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          }
+
+          // Mobile next preview canvas (hidden bar — keep sized for renderNext)
+          if (mNextCanvas && mNextCtx) {
+            const mc = 28;
+            mNextCanvas.width = Math.round(mc * dpr);
+            mNextCanvas.height = Math.round(mc * 2 * dpr);
+            mNextCanvas.style.width = mc + "px";
+            mNextCanvas.style.height = mc * 2 + "px";
+            mNextCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          }
         }
 
         // c is optional — defaults to the main game canvas context
@@ -1467,6 +1614,14 @@
           // B on top, A on bottom (matches the default-rotation visual in the well)
           drawCellAt(0, 0,  nc, Game.next.b, {}, nextCtx);
           drawCellAt(0, nc, nc, Game.next.a, {}, nextCtx);
+
+          // Also render mobile next preview
+          if (mNextCtx) {
+            const mc = parseFloat(mNextCanvas.style.width) || 28;
+            mNextCtx.clearRect(0, 0, mc, mc * 2);
+            drawCellAt(0, 0,  mc, Game.next.b, {}, mNextCtx);
+            drawCellAt(0, mc, mc, Game.next.a, {}, mNextCtx);
+          }
         }
 
         function rRect(c, x, y, w, h, r) {
@@ -1713,8 +1868,15 @@
           btn.addEventListener("mouseleave", onUp);
         });
 
-        // Swipe on the board canvas for soft drop / fine moves
+        // Swipe / tap / long-press on the board canvas
+        const LONG_PRESS_MS = 300;
         let touchSession = null;
+        let longPressTimer = null;
+
+        function clearLongPress() {
+          if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        }
+
         canvas.addEventListener(
           "touchstart",
           (e) => {
@@ -1728,7 +1890,16 @@
               t0: performance.now(),
               moved: false,
               soft: false,
+              dropped: false,
             };
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+              if (touchSession && !touchSession.moved) {
+                touchSession.dropped = true;
+                pressHardDrop();
+              }
+              longPressTimer = null;
+            }, LONG_PRESS_MS);
           },
           { passive: true }
         );
@@ -1748,10 +1919,12 @@
               }
               touchSession.lastX = t.clientX;
               touchSession.moved = true;
+              clearLongPress();
             }
             if (dy > cell * 1.4 && !touchSession.soft) {
               touchSession.soft = true;
               pressSoftDrop(true);
+              clearLongPress();
             }
           },
           { passive: true }
@@ -1759,21 +1932,85 @@
         canvas.addEventListener(
           "touchend",
           (e) => {
+            clearLongPress();
             if (!touchSession) return;
             const t = e.changedTouches[0];
             const dx = t.clientX - touchSession.startX;
             const dy = t.clientY - touchSession.startY;
             const dt = performance.now() - touchSession.t0;
             pressSoftDrop(false);
-            if (!touchSession.moved && Math.abs(dx) < 14 && Math.abs(dy) < 14 && dt < 220) {
+            // Quick tap = rotate (only if we didn't already hard-drop via long press)
+            if (!touchSession.dropped && !touchSession.moved && Math.abs(dx) < 14 && Math.abs(dy) < 14 && dt < 220) {
               pressRotCW();
-            } else if (!touchSession.moved && dy > cellSize() * 3 && dt < 350) {
-              pressHardDrop();
             }
             touchSession = null;
           },
           { passive: true }
         );
+        canvas.addEventListener("touchcancel", () => {
+          clearLongPress();
+          pressSoftDrop(false);
+          touchSession = null;
+        }, { passive: true });
+
+        // Extend touch controls to the bottom logo bar (topbar) on mobile.
+        // The topbar sits below the game canvas; we mirror the same gesture logic.
+        const topbarEl = document.getElementById("topbar");
+        if (topbarEl) {
+          topbarEl.addEventListener("touchstart", (e) => {
+            // Don't intercept taps on the home button link
+            if (e.target.closest("a")) return;
+            if (Game.state !== "playing") return;
+            const t = e.changedTouches[0];
+            touchSession = {
+              startX: t.clientX, startY: t.clientY,
+              lastX: t.clientX,  lastY: t.clientY,
+              t0: performance.now(),
+              moved: false, soft: false, dropped: false,
+            };
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+              if (touchSession && !touchSession.moved) {
+                touchSession.dropped = true;
+                pressHardDrop();
+              }
+              longPressTimer = null;
+            }, LONG_PRESS_MS);
+          }, { passive: true });
+
+          topbarEl.addEventListener("touchmove", (e) => {
+            if (!touchSession || Game.state !== "playing") return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchSession.lastX;
+            if (Math.abs(dx) > cellSize() * 0.6) {
+              if (dx > 0) { if (tryMove(1, 0)) Audio.move(); }
+              else        { if (tryMove(-1, 0)) Audio.move(); }
+              touchSession.lastX = t.clientX;
+              touchSession.moved = true;
+              clearLongPress();
+            }
+          }, { passive: true });
+
+          topbarEl.addEventListener("touchend", (e) => {
+            clearLongPress();
+            if (!touchSession) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchSession.startX;
+            const dy = t.clientY - touchSession.startY;
+            const dt = performance.now() - touchSession.t0;
+            pressSoftDrop(false);
+            if (!touchSession.dropped && !touchSession.moved && Math.abs(dx) < 14 && Math.abs(dy) < 14 && dt < 220) {
+              pressRotCW();
+            }
+            touchSession = null;
+          }, { passive: true });
+
+          topbarEl.addEventListener("touchcancel", () => {
+            clearLongPress();
+            pressSoftDrop(false);
+            touchSession = null;
+          }, { passive: true });
+        }
 
         // ============================================================
         // FLOW: START / RESTART / GAMEOVER
@@ -1832,10 +2069,19 @@
         }
 
         function updateHUD() {
-          ui.score.textContent = formatScore(Game.score);
-          ui.combo.textContent = Game.combo;
-          ui.level.textContent = Game.level;
-          ui.hi.textContent = formatScore(Math.max(Game.high, Game.score));
+          const s = formatScore(Game.score);
+          const c = Game.combo;
+          const l = Game.level;
+          const h = formatScore(Math.max(Game.high, Game.score));
+          ui.score.textContent = s;
+          ui.combo.textContent = c;
+          ui.level.textContent = l;
+          ui.hi.textContent = h;
+          // Mobile HUD
+          if (ui.mScore) ui.mScore.textContent = s;
+          if (ui.mCombo) ui.mCombo.textContent = c;
+          if (ui.mLevel) ui.mLevel.textContent = l;
+          if (ui.mHi) ui.mHi.textContent = h;
         }
 
         ui.startBtn.addEventListener("click", startGame);
