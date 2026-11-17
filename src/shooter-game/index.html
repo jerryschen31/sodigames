@@ -131,17 +131,46 @@
     transition: transform 0.1s, box-shadow 0.1s;
   }
   .home-link:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(78, 197, 255, 0.6); }
-  #quit-btn {
+  #pause-btn {
     pointer-events: auto;
-    padding: 8px 16px;
-    font-size: 14px;
-    border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    border-radius: 50%;
     background: rgba(0, 0, 0, 0.45);
     border: 2px solid rgba(255, 255, 255, 0.5);
     box-shadow: none;
   }
-  #quit-btn:hover { background: rgba(255, 71, 87, 0.8); box-shadow: none; }
-  #quit-btn.hidden { display: none; }
+  #pause-btn:hover { background: rgba(255, 255, 255, 0.2); box-shadow: none; }
+  #pause-btn.hidden { display: none; }
+  #pause-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(5, 5, 10, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  #pause-modal.hidden { display: none; }
+  .pause-box {
+    background: #1a1a2e;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    padding: 28px 36px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .pause-box h2 { font-size: 28px; letter-spacing: 1px; }
+  .pause-box .overlay-actions button.secondary {
+    background: linear-gradient(180deg, #555, #333);
+    box-shadow: none;
+  }
   .final-score .high { color: #ffd93d; }
   .difficulty-pill {
     display: flex;
@@ -181,9 +210,18 @@
       <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
       <div class="stat"><div class="label">High</div><div class="value" id="high">0</div></div>
     </div>
-    <button id="quit-btn" class="hidden" type="button">✕ Quit Game</button>
     <div class="group">
       <div class="stat"><div class="label">Lives</div><div class="value" id="hearts">♥♥♥♥</div></div>
+      <button id="pause-btn" class="hidden" type="button" aria-label="Pause" title="Pause (Space)">⏸</button>
+    </div>
+  </div>
+  <div id="pause-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <div class="pause-box">
+      <h2 id="pause-title">Game Paused</h2>
+      <div class="overlay-actions">
+        <button id="resume-btn" type="button">Resume</button>
+        <button id="quit-btn" class="secondary" type="button">Quit</button>
+      </div>
     </div>
   </div>
   <div id="overlay">
@@ -221,6 +259,9 @@
   const overlaySub = document.getElementById('overlay-sub');
   const finalScoreEl = document.getElementById('final-score');
   const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const pauseModal = document.getElementById('pause-modal');
+  const resumeBtn = document.getElementById('resume-btn');
   const quitBtn = document.getElementById('quit-btn');
   const INTRO_TITLE = overlayTitle.textContent;
   const INTRO_SUB = overlaySub.textContent;
@@ -277,6 +318,7 @@
   function newState() {
     return {
       running: false,
+      paused: false,
       score: 0,
       lives: getMaxLives(),
       enemies: [],
@@ -372,7 +414,7 @@
   }
 
   function handleTap(x, y) {
-    if (!state.running) return;
+    if (!state.running || state.paused) return;
     // Find the closest enemy whose hit zone contains the tap.
     // On touch devices we add TAP_PAD padding for forgiveness.
     let bestIdx = -1;
@@ -451,7 +493,7 @@
 
   function gameOver() {
     state.running = false;
-    quitBtn.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
     saveHighScore();
     overlayTitle.textContent = 'Game Over';
     overlaySub.textContent = 'They got you. Try again?';
@@ -468,18 +510,37 @@
     scoreEl.textContent = '0';
     renderHearts();
     overlay.classList.add('hidden');
-    quitBtn.classList.remove('hidden');
+    pauseBtn.classList.remove('hidden');
   }
 
-  // Quit mid-game: stop play and go back to the start screen.
+  let pausedAt = 0;
+  function pauseGame() {
+    if (!state.running || state.paused) return;
+    state.paused = true;
+    pausedAt = performance.now();
+    pauseModal.classList.remove('hidden');
+    if (document.activeElement) document.activeElement.blur();
+  }
+
+  function resumeGame() {
+    if (!state.paused) return;
+    state.paused = false;
+    // Don't count paused time toward difficulty ramp-up.
+    state.startTime += performance.now() - pausedAt;
+    state.lastFrame = performance.now();
+    pauseModal.classList.add('hidden');
+  }
+
+  // Quit from the pause menu: stop play and go back to the start screen.
   function quitGame() {
     if (!state.running) return;
     state.running = false;
+    pauseModal.classList.add('hidden');
     saveHighScore();
     state = newState();
     scoreEl.textContent = '0';
     renderHearts();
-    quitBtn.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
     overlayTitle.textContent = INTRO_TITLE;
     overlaySub.textContent = INTRO_SUB;
     finalScoreEl.innerHTML = '';
@@ -488,10 +549,25 @@
   }
 
   startBtn.addEventListener('click', startGame);
+  pauseBtn.addEventListener('click', pauseGame);
+  resumeBtn.addEventListener('click', resumeGame);
   quitBtn.addEventListener('click', quitGame);
 
+  window.addEventListener('keydown', (ev) => {
+    if (ev.repeat) return;
+    if (state.paused) {
+      if (ev.key === 'Enter' || ev.key === ' ' || ev.code === 'Space' || ev.key === 'Escape') {
+        ev.preventDefault();
+        resumeGame();
+      }
+    } else if (state.running && (ev.key === ' ' || ev.code === 'Space')) {
+      ev.preventDefault();
+      pauseGame();
+    }
+  });
+
   function update(dt) {
-    if (!state.running) return;
+    if (!state.running || state.paused) return;
 
     // Difficulty ramps over time: spawn interval shrinks.
     const elapsed = (performance.now() - state.startTime) / 1000;
