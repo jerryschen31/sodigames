@@ -109,6 +109,39 @@
   button:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255, 71, 87, 0.6); }
   button:active { transform: translateY(0); }
   .final-score { font-size: 22px; }
+  .overlay-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    align-items: center;
+  }
+  .home-link {
+    display: inline-block;
+    background: linear-gradient(180deg, #4ec5ff, #2a7fd4);
+    color: #fff;
+    text-decoration: none;
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(78, 197, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .home-link:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(78, 197, 255, 0.6); }
+  #quit-btn {
+    pointer-events: auto;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: none;
+  }
+  #quit-btn:hover { background: rgba(255, 71, 87, 0.8); box-shadow: none; }
+  #quit-btn.hidden { display: none; }
   .final-score .high { color: #ffd93d; }
   .difficulty-pill {
     display: flex;
@@ -148,6 +181,7 @@
       <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
       <div class="stat"><div class="label">High</div><div class="value" id="high">0</div></div>
     </div>
+    <button id="quit-btn" class="hidden" type="button">✕ Quit Game</button>
     <div class="group">
       <div class="stat"><div class="label">Lives</div><div class="value" id="hearts">♥♥♥♥</div></div>
     </div>
@@ -169,7 +203,10 @@
       <button class="active" data-mode="normal">Normal</button>
       <button data-mode="hard">Hard</button>
     </div>
-    <button id="start-btn">Start Game</button>
+    <div class="overlay-actions">
+      <button id="start-btn">Start Game</button>
+      <a class="home-link" id="home-btn" href="https://sodigames.com">Home</a>
+    </div>
   </div>
 </div>
 <script>
@@ -184,6 +221,9 @@
   const overlaySub = document.getElementById('overlay-sub');
   const finalScoreEl = document.getElementById('final-score');
   const startBtn = document.getElementById('start-btn');
+  const quitBtn = document.getElementById('quit-btn');
+  const INTRO_TITLE = overlayTitle.textContent;
+  const INTRO_SUB = overlaySub.textContent;
 
   const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   // On touch devices, enemies render ~15% smaller and tap forgiveness is added.
@@ -401,13 +441,18 @@
 
   let flashAlpha = 0;
 
-  function gameOver() {
-    state.running = false;
+  function saveHighScore() {
     if (state.score > highScore) {
       highScore = state.score;
       localStorage.setItem(HIGH_KEY, String(highScore));
       highEl.textContent = highScore;
     }
+  }
+
+  function gameOver() {
+    state.running = false;
+    quitBtn.classList.add('hidden');
+    saveHighScore();
     overlayTitle.textContent = 'Game Over';
     overlaySub.textContent = 'They got you. Try again?';
     finalScoreEl.innerHTML = `Final score: <strong>${state.score}</strong><br><span class="high">High score: ${highScore}</span>`;
@@ -423,9 +468,27 @@
     scoreEl.textContent = '0';
     renderHearts();
     overlay.classList.add('hidden');
+    quitBtn.classList.remove('hidden');
+  }
+
+  // Quit mid-game: stop play and go back to the start screen.
+  function quitGame() {
+    if (!state.running) return;
+    state.running = false;
+    saveHighScore();
+    state = newState();
+    scoreEl.textContent = '0';
+    renderHearts();
+    quitBtn.classList.add('hidden');
+    overlayTitle.textContent = INTRO_TITLE;
+    overlaySub.textContent = INTRO_SUB;
+    finalScoreEl.innerHTML = '';
+    startBtn.textContent = 'Start Game';
+    overlay.classList.remove('hidden');
   }
 
   startBtn.addEventListener('click', startGame);
+  quitBtn.addEventListener('click', quitGame);
 
   function update(dt) {
     if (!state.running) return;
