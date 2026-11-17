@@ -11,5 +11,6 @@ Currently have the following games:
 6. Treasure Row
 7. Chomp Chomp
 8. Picture Difference Game
+9. Color Me
 
 No login, no ads, easy to start. Enjoy!

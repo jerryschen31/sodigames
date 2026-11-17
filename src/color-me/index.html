@@ -1,0 +1,1745 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#ffd8ec" />
+    <title>Color Me</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Baloo+2:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #2b2350;
+        --pink: #ff5fa2;
+        --card: #ffffff;
+        --shadow: rgba(43, 35, 80, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+
+      body {
+        font-family: "Fredoka", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 20%, #ffe066 0 7px, transparent 8px),
+          radial-gradient(circle at 90% 15%, #ff8fb1 0 6px, transparent 7px),
+          radial-gradient(circle at 15% 85%, #8fd6ff 0 9px, transparent 10px),
+          radial-gradient(circle at 88% 80%, #b8f0a1 0 7px, transparent 8px),
+          linear-gradient(135deg, #fff2c7 0%, #ffd8ec 45%, #c7ecff 100%);
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      /* ---------- Header ---------- */
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: calc(env(safe-area-inset-top) + 8px) 14px 4px;
+      }
+
+      .brand {
+        font-family: "Baloo 2", "Fredoka", sans-serif;
+        font-weight: 800;
+        font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+        line-height: 1;
+        color: #fff;
+        text-shadow:
+          0 3px 0 var(--pink),
+          0 6px 10px rgba(43, 35, 80, 0.25);
+        transform: rotate(-2deg);
+        white-space: nowrap;
+      }
+
+      .brand span {
+        display: inline-block;
+      }
+      .brand span:nth-child(1) { color: #ff6b6b; }
+      .brand span:nth-child(2) { color: #ffa94d; }
+      .brand span:nth-child(3) { color: #ffd43b; }
+      .brand span:nth-child(4) { color: #69db7c; }
+      .brand span:nth-child(5) { color: #4dabf7; }
+      .brand span:nth-child(6) { color: #b197fc; margin-left: 0.3em; }
+      .brand span:nth-child(7) { color: #ff5fa2; }
+
+      .pic-name {
+        flex: 1;
+        text-align: center;
+        font-weight: 700;
+        font-size: clamp(1rem, 3vw, 1.3rem);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .pic-name b {
+        background: rgba(255, 255, 255, 0.75);
+        padding: 4px 16px;
+        border-radius: 999px;
+      }
+
+      .home-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        color: var(--ink);
+        font-family: "Baloo 2", "Fredoka", sans-serif;
+        font-weight: 800;
+        font-size: 1rem;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 3px solid #fff;
+        background: linear-gradient(180deg, #ffe58f, #ffb256);
+        box-shadow:
+          0 4px 0 #c6761f,
+          0 8px 14px var(--shadow);
+        transition: transform 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .home-btn:hover {
+        transform: translateY(-2px);
+      }
+      .home-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #c6761f, 0 4px 8px var(--shadow);
+      }
+
+      /* ---------- Palette ---------- */
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(24, 1fr);
+        gap: 6px;
+        margin: 8px auto 4px;
+        padding: 8px 10px;
+        width: min(100% - 20px, 1000px);
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 20px;
+        box-shadow: 0 4px 0 rgba(43, 35, 80, 0.1), 0 10px 20px -8px var(--shadow);
+      }
+
+      .swatch {
+        aspect-ratio: 1;
+        width: 100%;
+        max-width: 40px;
+        justify-self: center;
+        border-radius: 50%;
+        border: 3px solid rgba(43, 35, 80, 0.25);
+        background: var(--c);
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .swatch:hover {
+        transform: scale(1.12);
+      }
+
+      .swatch.selected {
+        transform: scale(1.22);
+        border-color: #fff;
+        box-shadow:
+          0 0 0 3px var(--ink),
+          0 4px 10px var(--shadow);
+      }
+
+      /* ---------- Toolbar ---------- */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px 2px;
+      }
+
+      .current {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: #fff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 3px 0 rgba(43, 35, 80, 0.15);
+      }
+
+      .current svg {
+        width: 34px;
+        height: 34px;
+      }
+
+      .btn {
+        font-family: "Fredoka", system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 0.98rem;
+        color: var(--ink);
+        border: 3px solid #fff;
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+        background: var(--bg, #fff);
+        box-shadow: 0 4px 0 var(--edge, #c9c3e0), 0 6px 12px -4px var(--shadow);
+        transition: transform 0.12s ease;
+        white-space: nowrap;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+      .btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 var(--edge, #c9c3e0);
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+        transform: none;
+      }
+
+      .btn.new { --bg: linear-gradient(180deg, #ffb3d2, #ff7eb3); --edge: #c2457b; }
+      .btn.pick { --bg: linear-gradient(180deg, #c7e9ff, #8ed1ff); --edge: #3f8fbf; }
+      .btn.undo { --bg: linear-gradient(180deg, #fff6a6, #ffd93d); --edge: #c58f11; }
+      .btn.clear { --bg: linear-gradient(180deg, #d6f5cf, #a8e29c); --edge: #5a9e4c; }
+      .btn.save { --bg: linear-gradient(180deg, #e6d6ff, #c4a6ff); --edge: #7d5bc0; }
+      .btn.sound { padding: 7px 11px; }
+
+      /* ---------- Board ---------- */
+      .board-wrap {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px calc(env(safe-area-inset-bottom) + 12px);
+        position: relative;
+      }
+
+      #board {
+        background: #fff;
+        border-radius: 22px;
+        border: 5px solid #fff;
+        box-shadow:
+          0 8px 0 rgba(43, 35, 80, 0.12),
+          0 20px 36px -12px rgba(43, 35, 80, 0.35);
+        touch-action: manipulation;
+        display: block;
+      }
+
+      .loading {
+        position: absolute;
+        font-weight: 700;
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      /* ---------- Sparkles / confetti ---------- */
+      .spark {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 50;
+        border: 2px solid #fff;
+        animation: spark 0.6s ease-out forwards;
+      }
+
+      @keyframes spark {
+        from {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+        to {
+          transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
+          opacity: 0;
+        }
+      }
+
+      .confetti {
+        position: fixed;
+        top: -20px;
+        width: 10px;
+        height: 16px;
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: 60;
+        animation: fall var(--t, 2.6s) linear forwards;
+      }
+
+      @keyframes fall {
+        to {
+          transform: translate(var(--drift), 110vh) rotate(var(--spin));
+        }
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        top: 45%;
+        transform: translate(-50%, -50%) scale(0.6);
+        font-family: "Baloo 2", sans-serif;
+        font-weight: 800;
+        font-size: clamp(2rem, 8vw, 3.6rem);
+        color: #fff;
+        text-shadow: 0 4px 0 var(--pink), 0 10px 20px rgba(43, 35, 80, 0.35);
+        pointer-events: none;
+        opacity: 0;
+        z-index: 70;
+        white-space: nowrap;
+      }
+
+      .toast.show {
+        animation: pop 2.2s ease forwards;
+      }
+
+      @keyframes pop {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(-6deg); }
+        15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(2deg); }
+        25% { transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
+        80% { opacity: 1; }
+        100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+      }
+
+      /* ---------- Gallery ---------- */
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(43, 35, 80, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 16px;
+      }
+
+      .modal.open {
+        display: flex;
+      }
+
+      .sheet {
+        background: #fff;
+        border-radius: 24px;
+        width: min(100%, 900px);
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        font-family: "Baloo 2", sans-serif;
+        font-weight: 800;
+        font-size: 1.5rem;
+        background: linear-gradient(90deg, #ffe7a8, #ffd1e3, #c7e9ff);
+      }
+
+      .close-btn {
+        border: none;
+        background: #fff;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 1.3rem;
+        cursor: pointer;
+        box-shadow: 0 3px 0 rgba(43, 35, 80, 0.15);
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 12px;
+        padding: 16px;
+        overflow-y: auto;
+      }
+
+      .thumb {
+        border: 3px solid #eee;
+        border-radius: 16px;
+        background: #fff;
+        padding: 6px 6px 4px;
+        cursor: pointer;
+        font-family: "Fredoka", sans-serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--ink);
+        transition: transform 0.15s ease, border-color 0.15s ease;
+      }
+
+      .thumb:hover {
+        transform: translateY(-3px) rotate(-1deg);
+        border-color: var(--pink);
+      }
+
+      .thumb.current-pic {
+        border-color: #4ec5ff;
+      }
+
+      .thumb svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* ---------- Small screens ---------- */
+      @media (max-width: 760px) {
+        .palette {
+          grid-template-columns: repeat(12, 1fr);
+          gap: 6px 4px;
+        }
+        .pic-name {
+          display: none;
+        }
+        .top {
+          justify-content: space-between;
+        }
+        .btn .label {
+          display: none;
+        }
+        .btn {
+          font-size: 1.2rem;
+          padding: 6px 12px;
+        }
+        .home-btn {
+          padding: 6px 12px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .palette {
+          grid-template-columns: repeat(8, 1fr);
+        }
+        .toolbar {
+          gap: 5px;
+        }
+        .btn {
+          font-size: 1.05rem;
+          padding: 5px 9px;
+        }
+        .current {
+          width: 38px;
+          height: 38px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand" aria-label="Color Me">
+        <span>C</span><span>o</span><span>l</span><span>o</span><span>r</span><span>M</span><span>e</span>
+      </div>
+      <div class="pic-name"><b id="picName">…</b></div>
+      <a class="home-btn" href="https://sodigames.com" aria-label="Back to home page">🏠 Home</a>
+    </header>
+
+    <div class="toolbar">
+      <div class="current" id="current" title="Your paint color"></div>
+      <button class="btn new" id="newBtn" type="button">🎲<span class="label"> New Picture</span></button>
+      <button class="btn pick" id="pickBtn" type="button">🖼️<span class="label"> Pick</span></button>
+      <button class="btn undo" id="undoBtn" type="button" disabled>↩️<span class="label"> Undo</span></button>
+      <button class="btn clear" id="clearBtn" type="button">🧽<span class="label"> Start Over</span></button>
+      <button class="btn save" id="saveBtn" type="button">💾<span class="label"> Save</span></button>
+      <button class="btn sound" id="soundBtn" type="button" aria-label="Toggle sound">🔊</button>
+    </div>
+
+    <div class="palette" id="palette" role="radiogroup" aria-label="Colors"></div>
+
+    <main class="board-wrap" id="wrap">
+      <canvas id="board" width="900" height="900" aria-label="Coloring picture"></canvas>
+      <div class="loading" id="loading">Loading…</div>
+    </main>
+
+    <div class="modal" id="gallery" aria-hidden="true">
+      <div class="sheet" role="dialog" aria-label="Pick a picture">
+        <div class="sheet-head">
+          <span>Pick a picture 🖍️</span>
+          <button class="close-btn" id="closeGallery" type="button" aria-label="Close">✖</button>
+        </div>
+        <div class="gallery" id="galleryGrid"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">Beautiful! 🌟</div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        /* =========================================================
+         * Drawing helpers — every picture is a 200x200 SVG made of
+         * closed shapes with thick black outlines and white fills.
+         * ========================================================= */
+        const n = (v) => +v.toFixed(2);
+        let uid = 0;
+
+        const dot = (x, y, r = 5) =>
+          `<circle cx="${x}" cy="${y}" r="${r}" fill="#000"/>` +
+          `<circle cx="${n(x + r * 0.38)}" cy="${n(y - r * 0.38)}" r="${n(r * 0.34)}" fill="#fff" stroke="none"/>`;
+        const eyes = (x1, x2, y, r = 5) => dot(x1, y, r) + dot(x2, y, r);
+        const smile = (x, y, w = 7, d = 4, sw = 3.5) =>
+          `<path d="M${n(x - w)} ${y} Q${x} ${n(y + d * 2)} ${n(x + w)} ${y}" fill="none" stroke-width="${sw}"/>`;
+        const cheek = (x, y, rx = 6, ry = 3.5) =>
+          `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" stroke-width="2.5"/>`;
+        const cheeks = (x1, x2, y, rx, ry) => cheek(x1, y, rx, ry) + cheek(x2, y, rx, ry);
+        const face = (cx, cy, s = 1, withCheeks = true) =>
+          eyes(n(cx - 12 * s), n(cx + 12 * s), cy, n(5 * s)) +
+          smile(cx, n(cy + 9 * s), n(7 * s), n(4 * s), n(Math.max(2.5, 3.5 * Math.min(1, s)))) +
+          (withCheeks ? cheeks(n(cx - 20 * s), n(cx + 20 * s), n(cy + 8 * s), n(6 * s), n(3.5 * s)) : "");
+
+        const star = (cx, cy, R, r, attrs = "") => {
+          const pts = [];
+          for (let i = 0; i < 10; i++) {
+            const a = ((-90 + i * 36) * Math.PI) / 180;
+            const rad = i % 2 ? r : R;
+            pts.push(`${n(cx + rad * Math.cos(a))},${n(cy + rad * Math.sin(a))}`);
+          }
+          return `<polygon points="${pts.join(" ")}" ${attrs}/>`;
+        };
+
+        const cloud = (cx, cy, s = 1) =>
+          `<path d="M-30 12 A12 12 0 0 1 -26 -10 A16 16 0 0 1 2 -18 A14 14 0 0 1 26 -6 A11 11 0 0 1 30 12 Z" ` +
+          `transform="translate(${cx} ${cy}) scale(${s})" stroke-width="${n(4 / s)}"/>`;
+
+        const rays = (cx, cy, r, R, count = 12, half = 12) => {
+          let out = "";
+          for (let i = 0; i < count; i++) {
+            const a = (i * 360) / count;
+            const p = (deg, rad) => {
+              const t = (deg * Math.PI) / 180;
+              return `${n(cx + rad * Math.cos(t))},${n(cy + rad * Math.sin(t))}`;
+            };
+            out += `<polygon points="${p(a - half, r)} ${p(a, R)} ${p(a + half, r)}"/>`;
+          }
+          return out;
+        };
+
+        const heart = (cx, cy, s) =>
+          `<path d="M${cx} ${n(cy + s * 0.9)} C${n(cx - s * 1.6)} ${n(cy - s * 0.2)} ${n(cx - s * 0.8)} ${n(cy - s * 1.3)} ${cx} ${n(cy - s * 0.4)} ` +
+          `C${n(cx + s * 0.8)} ${n(cy - s * 1.3)} ${n(cx + s * 1.6)} ${n(cy - s * 0.2)} ${cx} ${n(cy + s * 0.9)}Z"/>`;
+
+        const spiral = (cx, cy, R, turns = 2.3) => {
+          let d = "";
+          for (let t = 0.06; t <= 1.0001; t += 0.01) {
+            const a = turns * 2 * Math.PI * t;
+            d += (d ? " L" : "M") + `${n(cx + R * t * Math.cos(a))} ${n(cy + R * t * Math.sin(a))}`;
+          }
+          return `<path d="${d}" fill="none"/>`;
+        };
+
+        const tinyFlower = (x, y) =>
+          [0, 72, 144, 216, 288]
+            .map((a) => {
+              const t = ((a - 90) * Math.PI) / 180;
+              return `<circle cx="${n(x + 6 * Math.cos(t))}" cy="${n(y + 6 * Math.sin(t))}" r="4.5" stroke-width="2.5"/>`;
+            })
+            .join("") + `<circle cx="${x}" cy="${y}" r="3.5" stroke-width="2.5"/>`;
+
+        const wavyCircle = (cx, cy, r, amp, waves) => {
+          let d = "";
+          for (let i = 0; i <= 120; i++) {
+            const t = (i / 120) * Math.PI * 2;
+            const rr = r + amp * Math.sin(t * waves);
+            d += (i ? " L" : "M") + `${n(cx + rr * Math.cos(t))} ${n(cy + rr * Math.sin(t))}`;
+          }
+          return `<path d="${d}Z"/>`;
+        };
+
+        /* Cake frosting: rounded top edge with drippy scallops underneath. */
+        const frosting = (x0, x1, y, scallops) => {
+          const w = (x1 - x0) / scallops;
+          let d = `M${x0} ${y + 12} V${y + 8} Q${x0} ${y} ${x0 + 8} ${y} H${x1 - 8} Q${x1} ${y} ${x1} ${y + 8} V${y + 12}`;
+          for (let k = 0; k < scallops; k++) {
+            const xa = x1 - k * w;
+            d += ` Q${n(xa - w / 2)} ${y + 24} ${n(xa - w)} ${y + 12}`;
+          }
+          return `<path d="${d}Z"/>`;
+        };
+
+        /* A shape with extra dividing lines that are clipped to its inside. */
+        const pat = (shape, inner) => {
+          const id = "cm" + uid++;
+          return (
+            `<clipPath id="${id}">${shape}</clipPath>${shape}` +
+            `<g clip-path="url(#${id})">${inner}</g>${shape.replace("/>", ' fill="none"/>')}`
+          );
+        };
+
+        const diamonds = (x0, y0, x1, y1, step, rise) => {
+          let d = "";
+          for (let x = x0 - (y1 - y0); x <= x1 + (y1 - y0); x += step) {
+            d += `M${x} ${y0} L${x + rise} ${y1} M${x} ${y0} L${x - rise} ${y1} `;
+          }
+          return `<path d="${d}" fill="none" stroke-width="3"/>`;
+        };
+
+        /* =========================================================
+         * Pictures
+         * ========================================================= */
+        const PICTURES = [
+          {
+            name: "Flower",
+            body: `
+              <path d="M0 188 H200" fill="none"/>
+              <path d="M100 165 C82 146 60 150 50 162 C64 176 86 176 100 165Z"/>
+              <path d="M100 145 C118 126 140 130 150 142 C136 156 114 156 100 145Z"/>
+              <rect x="94" y="100" width="12" height="90" rx="6"/>
+              ${[0, 45, 90, 135, 180, 225, 270, 315]
+                .map((a) => `<ellipse cx="100" cy="46" rx="15" ry="25" transform="rotate(${a} 100 78)"/>`)
+                .join("")}
+              <circle cx="100" cy="78" r="24"/>
+              ${face(100, 76, 0.8)}
+              ${tinyFlower(30, 176)}${tinyFlower(172, 174)}`,
+          },
+          {
+            name: "Carrot",
+            body: `
+              <path d="M100 66 C88 44 70 30 64 16 C84 18 98 36 106 62Z"/>
+              <path d="M98 66 C94 40 96 22 106 6 C116 22 114 44 108 66Z"/>
+              <path d="M104 66 C114 44 128 32 142 24 C142 42 126 58 110 68Z"/>
+              <path d="M64 72 Q100 54 136 72 Q130 132 100 194 Q70 132 64 72Z"/>
+              <path d="M80 124 H92 M110 142 H122 M90 166 H100" fill="none"/>
+              ${face(100, 94, 0.9)}`,
+          },
+          {
+            name: "Bunny",
+            body: `
+              <ellipse cx="80" cy="48" rx="14" ry="38" transform="rotate(-10 80 48)"/>
+              <ellipse cx="80" cy="52" rx="6" ry="25" transform="rotate(-10 80 48)" stroke-width="3"/>
+              <ellipse cx="120" cy="48" rx="14" ry="38" transform="rotate(10 120 48)"/>
+              <ellipse cx="120" cy="52" rx="6" ry="25" transform="rotate(10 120 48)" stroke-width="3"/>
+              <circle cx="146" cy="166" r="11"/>
+              <ellipse cx="100" cy="160" rx="44" ry="34"/>
+              <ellipse cx="100" cy="170" rx="24" ry="17" stroke-width="3"/>
+              <circle cx="100" cy="104" r="38"/>
+              <ellipse cx="76" cy="190" rx="17" ry="8"/>
+              <ellipse cx="124" cy="190" rx="17" ry="8"/>
+              ${eyes(86, 114, 100, 5)}
+              <path d="M95 110 H105 L100 116Z"/>
+              <path d="M100 116 Q96 124 90 120 M100 116 Q104 124 110 120" fill="none" stroke-width="3"/>
+              ${cheeks(76, 124, 114, 7, 4)}`,
+          },
+          {
+            name: "Rainbow",
+            body: `
+              <path d="M0 186 Q50 176 100 186 T200 186" fill="none"/>
+              ${[86, 73, 60, 47, 34]
+                .map((r) => `<path d="M${100 - r} 150 A${r} ${r} 0 0 1 ${100 + r} 150Z"/>`)
+                .join("")}
+              ${cloud(28, 150, 0.85)}${cloud(172, 150, 0.85)}
+              ${face(28, 152, 0.45)}${face(172, 152, 0.45)}
+              ${rays(168, 32, 18, 28, 10, 11)}<circle cx="168" cy="32" r="16"/>
+              ${star(30, 34, 11, 5)}${star(56, 16, 7, 3)}`,
+          },
+          {
+            name: "Unicorn",
+            body: `
+              ${[[60, 64, 15], [52, 90, 16], [54, 116, 15], [62, 140, 13], [140, 64, 15], [148, 90, 16], [146, 116, 15], [138, 140, 13]]
+                .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
+                .join("")}
+              <path d="M70 64 L58 22 L92 50Z"/><path d="M72 56 L64 34 L85 50Z" stroke-width="3"/>
+              <path d="M130 64 L142 22 L108 50Z"/><path d="M128 56 L136 34 L115 50Z" stroke-width="3"/>
+              ${pat(`<path d="M88 54 L100 6 L112 54Z"/>`, `<path d="M80 44 L120 32 M80 28 L120 16" fill="none"/>`)}
+              <ellipse cx="100" cy="92" rx="40" ry="46"/>
+              <path d="M78 58 Q90 40 112 46 Q126 50 122 64 Q112 54 100 60 Q88 54 78 58Z"/>
+              <ellipse cx="100" cy="128" rx="30" ry="20"/>
+              <ellipse cx="90" cy="125" rx="3" ry="4" fill="#000"/>
+              <ellipse cx="110" cy="125" rx="3" ry="4" fill="#000"/>
+              ${smile(100, 136, 9, 3)}
+              ${eyes(84, 116, 94, 6)}
+              ${cheeks(72, 128, 108, 7, 4)}
+              ${star(26, 178, 12, 5)}${star(174, 178, 12, 5)}${star(24, 24, 9, 4)}${star(176, 24, 9, 4)}`,
+          },
+          {
+            name: "Boba Tea",
+            body: `
+              <rect x="104" y="4" width="14" height="80" rx="4" transform="rotate(14 111 44)"/>
+              ${pat(
+                `<path d="M52 78 L148 78 L136 188 Q100 196 64 188Z"/>`,
+                `<path d="M40 112 Q70 102 100 112 T160 112" fill="none"/>`
+              )}
+              <path d="M46 76 Q100 26 154 76Z"/>
+              <rect x="42" y="70" width="116" height="14" rx="7"/>
+              ${[[80, 176], [97, 180], [114, 177], [126, 168], [86, 162], [106, 164], [118, 152], [75, 155]]
+                .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" stroke-width="3"/>`)
+                .join("")}
+              ${face(100, 130, 1)}`,
+          },
+          {
+            name: "Kitty",
+            body: `
+              <path d="M138 168 Q186 168 182 128 Q180 112 168 116 Q170 152 134 152Z"/>
+              <ellipse cx="100" cy="158" rx="44" ry="34"/>
+              <ellipse cx="100" cy="168" rx="24" ry="18" stroke-width="3"/>
+              <path d="M56 74 L60 24 L96 52Z"/><path d="M64 62 L65 36 L84 52Z" stroke-width="3"/>
+              <path d="M144 74 L140 24 L104 52Z"/><path d="M136 62 L135 36 L116 52Z" stroke-width="3"/>
+              <ellipse cx="100" cy="88" rx="50" ry="40"/>
+              <ellipse cx="78" cy="190" rx="16" ry="8"/><ellipse cx="122" cy="190" rx="16" ry="8"/>
+              <path d="M92 54 L94 64 M100 52 V64 M108 54 L106 64" fill="none" stroke-width="3"/>
+              ${eyes(80, 120, 84, 6)}
+              <path d="M95 96 H105 L100 102Z"/>
+              <path d="M100 102 Q95 110 89 106 M100 102 Q105 110 111 106" fill="none" stroke-width="3"/>
+              <path d="M56 94 L32 90 M56 101 L32 105 M144 94 L168 90 M144 101 L168 105" fill="none" stroke-width="3"/>
+              ${cheeks(68, 132, 100, 6, 4)}`,
+          },
+          {
+            name: "Puppy",
+            body: `
+              <path d="M136 160 Q165 150 168 125 Q176 128 172 145 Q166 165 138 172Z"/>
+              <ellipse cx="100" cy="165" rx="42" ry="30"/>
+              <rect x="68" y="126" width="64" height="13" rx="6.5"/>
+              <circle cx="100" cy="146" r="7"/>
+              <circle cx="100" cy="84" r="44"/>
+              <ellipse cx="54" cy="92" rx="16" ry="34" transform="rotate(18 54 92)"/>
+              <ellipse cx="146" cy="92" rx="16" ry="34" transform="rotate(-18 146 92)"/>
+              <ellipse cx="120" cy="72" rx="14" ry="12" stroke-width="3"/>
+              ${eyes(82, 118, 74, 6)}
+              <ellipse cx="100" cy="104" rx="24" ry="17"/>
+              <ellipse cx="100" cy="98" rx="8" ry="5.5" fill="#000"/>
+              <path d="M100 104 V110 M100 110 Q92 116 86 110 M100 110 Q108 116 114 110" fill="none" stroke-width="3"/>
+              <path d="M94 115 Q100 130 106 115Z" stroke-width="3"/>
+              <ellipse cx="78" cy="192" rx="15" ry="8"/><ellipse cx="122" cy="192" rx="15" ry="8"/>`,
+          },
+          {
+            name: "Fish",
+            body: `
+              <path d="M0 186 Q50 178 100 186 T200 186" fill="none"/>
+              <path d="M20 196 Q8 170 22 148 Q32 170 28 196Z"/>
+              <path d="M172 196 Q162 166 178 144 Q186 170 182 196Z"/>
+              <path d="M140 100 L186 66 Q176 100 186 134Z"/>
+              <path d="M70 66 Q96 30 128 70Z"/>
+              <path d="M80 136 Q96 160 112 134Z"/>
+              ${pat(
+                `<ellipse cx="95" cy="100" rx="58" ry="40"/>`,
+                `<path d="M112 56 Q100 100 112 144 M134 60 Q122 100 134 140" fill="none"/>`
+              )}
+              <circle cx="64" cy="94" r="12"/>
+              ${dot(66, 94, 6)}
+              <path d="M42 112 Q48 118 56 114" fill="none" stroke-width="3.5"/>
+              <path d="M88 104 Q108 108 98 126 Q84 118 88 104Z"/>
+              <circle cx="26" cy="56" r="9"/><circle cx="38" cy="30" r="6"/><circle cx="20" cy="16" r="4"/>`,
+          },
+          {
+            name: "Butterfly",
+            body: `
+              <path d="M96 52 Q86 30 74 22" fill="none"/><circle cx="72" cy="20" r="5"/>
+              <path d="M104 52 Q114 30 126 22" fill="none"/><circle cx="128" cy="20" r="5"/>
+              <ellipse cx="66" cy="76" rx="38" ry="32" transform="rotate(-20 66 76)"/>
+              <ellipse cx="134" cy="76" rx="38" ry="32" transform="rotate(20 134 76)"/>
+              <ellipse cx="72" cy="134" rx="28" ry="26" transform="rotate(20 72 134)"/>
+              <ellipse cx="128" cy="134" rx="28" ry="26" transform="rotate(-20 128 134)"/>
+              <circle cx="58" cy="70" r="12"/><circle cx="142" cy="70" r="12"/>
+              <circle cx="44" cy="92" r="6"/><circle cx="156" cy="92" r="6"/>
+              <circle cx="68" cy="140" r="10"/><circle cx="132" cy="140" r="10"/>
+              ${pat(
+                `<ellipse cx="100" cy="112" rx="11" ry="52"/>`,
+                `<path d="M80 100 H120 M80 120 H120 M80 140 H120" fill="none"/>`
+              )}
+              <circle cx="100" cy="56" r="15"/>
+              ${eyes(94, 106, 54, 3.2)}${smile(100, 61, 5, 2.5, 2.5)}`,
+          },
+          {
+            name: "House",
+            body: `
+              <path d="M0 182 H200" fill="none"/>
+              ${rays(30, 30, 16, 26, 10, 12)}<circle cx="30" cy="30" r="14"/>${face(30, 30, 0.45)}
+              ${cloud(158, 24, 0.6)}
+              <rect x="124" y="46" width="18" height="40"/>
+              <rect x="48" y="96" width="104" height="86"/>
+              <path d="M36 102 L100 44 L164 102Z"/>
+              ${pat(`<circle cx="100" cy="78" r="11"/>`, `<path d="M100 60 V96 M80 78 H120" fill="none" stroke-width="3"/>`)}
+              ${pat(`<rect x="58" y="112" width="24" height="24" rx="2"/>`, `<path d="M70 100 V150 M50 124 H90" fill="none" stroke-width="3"/>`)}
+              ${pat(`<rect x="118" y="112" width="24" height="24" rx="2"/>`, `<path d="M130 100 V150 M110 124 H150" fill="none" stroke-width="3"/>`)}
+              <path d="M86 182 V152 Q86 138 100 138 Q114 138 114 152 V182Z"/>
+              <circle cx="108" cy="162" r="2.5" fill="#000"/>
+              <path d="M86 182 L74 200 M114 182 L126 200" fill="none"/>
+              ${tinyFlower(26, 172)}${tinyFlower(174, 172)}`,
+          },
+          {
+            name: "Sunshine",
+            body: `
+              ${rays(100, 100, 54, 94, 12, 13)}
+              <circle cx="100" cy="100" r="56"/>
+              ${face(100, 98, 1.5)}`,
+          },
+          {
+            name: "Ice Cream",
+            body: `
+              ${pat(`<path d="M64 110 L100 192 L136 110Z"/>`, diamonds(60, 100, 140, 200, 14, 40))}
+              <circle cx="100" cy="50" r="28"/>
+              <path d="M100 15 Q103 6 112 3" fill="none" stroke-width="3"/>
+              <circle cx="100" cy="22" r="9"/>
+              <circle cx="100" cy="92" r="36"/>
+              ${face(100, 94, 1)}
+              <rect x="84" y="42" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(-30 88 44)"/>
+              <rect x="108" y="40" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(25 112 42)"/>
+              <rect x="96" y="58" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(10 100 60)"/>
+              <rect x="116" y="56" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(-40 120 58)"/>`,
+          },
+          {
+            name: "Cupcake",
+            body: `
+              ${pat(
+                `<path d="M56 112 L144 112 L132 188 L68 188Z"/>`,
+                `<path d="M78 100 L84 200 M100 100 V200 M122 100 L116 200" fill="none"/>`
+              )}
+              <path d="M48 116 Q36 100 54 90 Q48 68 74 64 Q78 42 100 40 Q122 42 126 64 Q152 68 146 90 Q164 100 152 116 Z"/>
+              <path d="M100 23 Q104 12 114 8" fill="none" stroke-width="3"/>
+              <circle cx="100" cy="34" r="11"/>
+              ${face(100, 86, 1)}
+              <rect x="64" y="96" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(-30 68 98)"/>
+              <rect x="128" y="96" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(30 132 98)"/>
+              <rect x="78" y="62" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(20 82 64)"/>
+              <rect x="116" y="58" width="9" height="3.5" rx="1.5" stroke-width="2" transform="rotate(-20 120 60)"/>
+              <rect x="96" y="104" width="9" height="3.5" rx="1.5" stroke-width="2"/>`,
+          },
+          {
+            name: "Apple",
+            body: `
+              <path d="M104 40 Q120 20 146 26 Q132 50 104 40Z"/>
+              <path d="M108 38 Q124 34 138 29" fill="none" stroke-width="2.5"/>
+              <path d="M96 60 Q94 40 102 24 L110 27 Q103 42 105 60Z"/>
+              <path d="M100 60 C70 40 35 60 38 105 C42 155 75 180 100 170 C125 180 158 155 162 105 C165 60 130 40 100 60Z"/>
+              <ellipse cx="62" cy="86" rx="6" ry="13" transform="rotate(25 62 86)"/>
+              ${face(100, 112, 1.1)}`,
+          },
+          {
+            name: "Strawberry",
+            body: `
+              <rect x="96" y="14" width="8" height="22" rx="4"/>
+              <path d="M100 185 C60 170 35 120 45 85 C55 60 145 60 155 85 C165 120 140 170 100 185Z"/>
+              <path d="M100 72 L66 64 L84 54 L70 38 L92 46 L100 28 L108 46 L130 38 L116 54 L134 64Z"/>
+              ${[[66, 98], [134, 98], [58, 124], [142, 124], [78, 150], [122, 150], [100, 170], [86, 82], [114, 82]]
+                .map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.5" ry="4" fill="#000"/>`)
+                .join("")}
+              ${face(100, 112, 1)}`,
+          },
+          {
+            name: "Mushroom",
+            body: `
+              <path d="M0 184 Q50 176 100 184 T200 184" fill="none"/>
+              <path d="M74 100 Q66 160 76 186 L124 186 Q134 160 126 100Z"/>
+              <path d="M28 108 Q26 34 100 30 Q174 34 172 108 Q100 120 28 108Z"/>
+              <circle cx="66" cy="72" r="13"/><circle cx="110" cy="52" r="11"/>
+              <circle cx="144" cy="84" r="10"/><circle cx="102" cy="88" r="8"/><circle cx="46" cy="98" r="5"/>
+              ${face(100, 146, 1)}
+              <path d="M20 184 L24 170 L28 183 M34 182 L38 168 L42 182 M160 182 L164 168 L168 182 M174 184 L178 170 L182 185" fill="none" stroke-width="3"/>`,
+          },
+          {
+            name: "Owl",
+            body: `
+              <path d="M58 66 L50 26 L84 54Z"/><path d="M142 66 L150 26 L116 54Z"/>
+              <ellipse cx="100" cy="112" rx="56" ry="66"/>
+              <ellipse cx="100" cy="138" rx="32" ry="34"/>
+              <path d="M86 128 Q90 134 94 128 M106 128 Q110 134 114 128 M96 146 Q100 152 104 146 M86 162 Q90 168 94 162 M106 162 Q110 168 114 162" fill="none" stroke-width="3"/>
+              <path d="M48 100 Q28 140 62 166 Q56 130 48 100Z"/>
+              <path d="M152 100 Q172 140 138 166 Q144 130 152 100Z"/>
+              <circle cx="78" cy="88" r="20"/><circle cx="122" cy="88" r="20"/>
+              ${dot(80, 90, 9)}${dot(120, 90, 9)}
+              <path d="M92 106 L108 106 L100 118Z"/>
+              <rect x="10" y="174" width="180" height="12" rx="6"/>
+              <ellipse cx="84" cy="176" rx="10" ry="6"/><ellipse cx="116" cy="176" rx="10" ry="6"/>
+              <path d="M172 174 Q182 158 196 160 Q190 176 172 174Z"/>`,
+          },
+          {
+            name: "Turtle",
+            body: `
+              <path d="M0 184 H200" fill="none"/>
+              <ellipse cx="62" cy="152" rx="15" ry="18"/><ellipse cx="148" cy="152" rx="15" ry="18"/>
+              <path d="M172 130 L194 138 L172 142Z"/>
+              ${pat(
+                `<path d="M40 136 Q42 56 106 54 Q170 56 174 136Z"/>`,
+                `<path d="M90 80 L122 80 L132 104 L122 126 L90 126 L80 104Z M90 80 L76 40 M122 80 L136 40 M80 104 L30 104 M132 104 L180 104 M90 126 L80 140 M122 126 L132 140" fill="none"/>`
+              )}
+              <rect x="34" y="128" width="146" height="14" rx="7"/>
+              <circle cx="30" cy="106" r="22"/>
+              ${face(30, 104, 0.7)}
+              ${cloud(160, 30, 0.6)}`,
+          },
+          {
+            name: "Whale",
+            body: `
+              <path d="M0 178 Q25 168 50 178 T100 178 T150 178 T200 178 V200 H0Z"/>
+              <path d="M148 116 Q170 100 188 80 Q192 104 180 116 Q194 128 190 150 Q170 132 148 126Z"/>
+              ${pat(
+                `<path d="M24 116 C24 72 76 60 110 64 C146 68 162 94 162 116 C162 150 124 162 90 162 C50 162 24 150 24 116Z"/>`,
+                `<path d="M18 128 Q90 156 168 124" fill="none"/>`
+              )}
+              <path d="M96 128 Q112 132 116 148 Q100 148 92 136Z"/>
+              ${dot(60, 104, 5)}
+              <path d="M38 116 Q48 124 58 118" fill="none" stroke-width="3.5"/>
+              ${cheek(74, 116, 7, 4)}
+              <path d="M96 64 Q94 44 96 32 M96 32 Q84 20 74 28 M96 32 Q108 20 118 28" fill="none"/>
+              <circle cx="72" cy="31" r="4"/><circle cx="120" cy="31" r="4"/>`,
+          },
+          {
+            name: "Rocket",
+            body: `
+              ${star(30, 40, 10, 4)}${star(170, 30, 8, 3.5)}${star(166, 160, 9, 4)}${star(34, 160, 7, 3)}
+              <circle cx="164" cy="96" r="10"/><path d="M148 96 Q164 104 180 96" fill="none" stroke-width="3"/>
+              <path d="M70 112 L40 156 L70 146Z"/><path d="M130 112 L160 156 L130 146Z"/>
+              <path d="M82 156 Q88 196 100 180 Q112 196 118 156Z"/>
+              <path d="M92 156 Q96 178 100 170 Q104 178 108 156Z" stroke-width="3"/>
+              ${pat(`<path d="M100 18 Q142 58 134 146 L66 146 Q58 58 100 18Z"/>`, `<path d="M50 58 Q100 44 150 58" fill="none"/>`)}
+              <circle cx="100" cy="94" r="18"/><circle cx="100" cy="94" r="11"/>
+              <rect x="76" y="140" width="48" height="16" rx="5"/>`,
+          },
+          {
+            name: "Happy Star",
+            body: `
+              <path d="M168.8 13.2 A20 20 0 1 0 149.1 47.3 A24 24 0 0 1 168.8 13.2Z"/>
+              ${star(100, 112, 86, 40)}
+              ${face(100, 116, 1.2)}
+              ${star(28, 28, 10, 4)}${star(22, 172, 9, 4)}${star(178, 172, 9, 4)}`,
+          },
+          {
+            name: "Balloons",
+            body: `
+              <path d="M64 108 Q76 140 100 178 M136 108 Q124 140 100 178 M100 92 Q96 130 100 178" fill="none" stroke-width="3"/>
+              <ellipse cx="64" cy="66" rx="30" ry="36"/><path d="M64 100 L58 108 L70 108Z"/>
+              <ellipse cx="136" cy="66" rx="30" ry="36"/><path d="M136 100 L130 108 L142 108Z"/>
+              <ellipse cx="100" cy="50" rx="30" ry="36"/><path d="M100 84 L94 92 L106 92Z"/>
+              <path d="M44 66 Q44 46 56 38" fill="none" stroke-width="3"/>
+              <path d="M152 50 Q158 60 156 72" fill="none" stroke-width="3"/>
+              ${face(100, 50, 0.8)}
+              <path d="M100 178 L82 168 L82 188Z"/><path d="M100 178 L118 168 L118 188Z"/>
+              <circle cx="100" cy="178" r="5"/>`,
+          },
+          {
+            name: "Car",
+            body: `
+              <path d="M0 178 H200" fill="none"/>
+              <circle cx="8" cy="138" r="5" stroke-width="3"/>
+              <path d="M16 152 V122 Q18 108 36 106 L60 102 L80 70 Q86 64 96 64 L136 64 Q146 64 152 72 L170 102 Q188 106 188 124 V152Z"/>
+              <path d="M88 74 L72 102 L112 102 V74Z"/>
+              <path d="M120 74 V102 L162 102 L146 74Z"/>
+              ${eyes(132, 148, 88, 4.5)}
+              <path d="M116 104 V150" fill="none"/>
+              <path d="M124 116 H134" fill="none" stroke-width="3"/>
+              <circle cx="180" cy="118" r="5"/>
+              <path d="M160 136 Q172 144 184 136" fill="none" stroke-width="3"/>
+              <circle cx="56" cy="156" r="20"/><circle cx="56" cy="156" r="8"/>
+              <circle cx="150" cy="156" r="20"/><circle cx="150" cy="156" r="8"/>`,
+          },
+          {
+            name: "Snail",
+            body: `
+              <path d="M0 182 H200" fill="none"/>
+              <path d="M34 104 L24 74 M48 100 L54 70" fill="none"/>
+              <circle cx="24" cy="70" r="6"/><circle cx="55" cy="66" r="6"/>
+              <path d="M24 180 Q14 140 26 112 Q40 92 56 108 Q62 120 64 150 L180 150 Q194 166 176 180Z"/>
+              <circle cx="116" cy="106" r="44"/>
+              ${spiral(116, 106, 38, 2.3)}
+              ${face(42, 132, 0.7)}
+              ${tinyFlower(176, 30)}`,
+          },
+          {
+            name: "Ladybug",
+            body: `
+              <path d="M88 40 Q80 20 68 16 M112 40 Q120 20 132 16" fill="none"/>
+              <circle cx="66" cy="15" r="5"/><circle cx="134" cy="15" r="5"/>
+              <path d="M44 100 L24 92 M42 124 L20 124 M46 148 L26 160 M156 100 L176 92 M158 124 L180 124 M154 148 L174 160" fill="none"/>
+              <circle cx="100" cy="56" r="28"/>
+              ${eyes(90, 110, 44, 4.5)}${smile(100, 49, 5, 2.5, 2.5)}
+              ${pat(
+                `<circle cx="100" cy="118" r="58"/>`,
+                `<path d="M100 50 V180" fill="none"/><circle cx="74" cy="96" r="12"/><circle cx="126" cy="96" r="12"/>` +
+                  `<circle cx="70" cy="140" r="13"/><circle cx="130" cy="140" r="13"/><circle cx="84" cy="164" r="7"/><circle cx="116" cy="164" r="7"/>`
+              )}`,
+          },
+          {
+            name: "Bumblebee",
+            body: `
+              <path d="M158 108 L188 116 L158 124Z"/>
+              <ellipse cx="96" cy="64" rx="20" ry="30" transform="rotate(-25 96 64)"/>
+              <ellipse cx="128" cy="64" rx="20" ry="30" transform="rotate(25 128 64)"/>
+              ${pat(
+                `<ellipse cx="112" cy="116" rx="54" ry="40"/>`,
+                `<path d="M96 70 Q88 116 96 162 M120 70 Q112 116 120 162 M144 70 Q136 116 144 162" fill="none"/>`
+              )}
+              <path d="M46 82 Q40 60 30 54 M66 82 Q70 60 80 52" fill="none"/>
+              <circle cx="28" cy="52" r="5"/><circle cx="82" cy="50" r="5"/>
+              <circle cx="56" cy="112" r="32"/>
+              ${face(56, 112, 0.9)}
+              ${tinyFlower(30, 180)}${tinyFlower(170, 180)}`,
+          },
+          {
+            name: "Penguin",
+            body: `
+              <ellipse cx="80" cy="186" rx="16" ry="7"/><ellipse cx="120" cy="186" rx="16" ry="7"/>
+              <path d="M50 96 Q24 130 40 160 Q52 140 56 120Z"/>
+              <path d="M150 96 Q176 130 160 160 Q148 140 144 120Z"/>
+              ${pat(
+                `<ellipse cx="100" cy="110" rx="55" ry="75"/>`,
+                `<path d="M100 60 C70 56 58 80 64 110 C66 150 76 176 100 176 C124 176 134 150 136 110 C142 80 130 56 100 60Z"/>` +
+                  `<path d="M30 116 Q100 132 170 116 L170 130 Q100 146 30 130Z"/>`
+              )}
+              <path d="M120 128 L130 160 L114 160 L108 132Z"/>
+              ${eyes(86, 114, 82, 5)}
+              <path d="M92 92 L108 92 L100 102Z"/>
+              ${cheeks(74, 126, 98, 6, 3.5)}`,
+          },
+          {
+            name: "Froggy",
+            body: `
+              <ellipse cx="100" cy="182" rx="94" ry="15"/>
+              <ellipse cx="100" cy="146" rx="58" ry="36"/>
+              <ellipse cx="100" cy="152" rx="34" ry="22" stroke-width="3"/>
+              <ellipse cx="66" cy="178" rx="16" ry="7"/><ellipse cx="134" cy="178" rx="16" ry="7"/>
+              <circle cx="68" cy="66" r="22"/><circle cx="132" cy="66" r="22"/>
+              <ellipse cx="100" cy="100" rx="60" ry="36"/>
+              ${dot(68, 58, 8)}${dot(132, 58, 8)}
+              <circle cx="94" cy="92" r="1.6" fill="#000"/><circle cx="106" cy="92" r="1.6" fill="#000"/>
+              <path d="M70 108 Q100 128 130 108" fill="none"/>
+              ${cheeks(60, 140, 100, 8, 4.5)}`,
+          },
+          {
+            name: "Pineapple",
+            body: `
+              <path d="M84 90 L66 40 L88 58 L84 18 L100 50 L112 12 L114 52 L134 30 L118 90Z"/>
+              ${pat(`<ellipse cx="100" cy="136" rx="46" ry="54"/>`, diamonds(40, 70, 160, 200, 18, 60))}
+              <rect x="70" y="112" width="60" height="32" rx="16"/>
+              ${face(100, 124, 0.9)}`,
+          },
+          {
+            name: "Watermelon",
+            body: `
+              <path d="M12 64 A88 88 0 0 0 188 64Z"/>
+              <path d="M24 64 A76 76 0 0 0 176 64Z"/>
+              <path d="M34 64 A66 66 0 0 0 166 64Z"/>
+              ${[[58, 80], [142, 80], [76, 112], [124, 112], [100, 120], [48, 66], [152, 66]]
+                .map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.5" ry="4.5" fill="#000"/>`)
+                .join("")}
+              ${face(100, 84, 1)}
+              ${tinyFlower(30, 172)}${tinyFlower(170, 172)}${star(100, 172, 12, 5)}`,
+          },
+          {
+            name: "Cactus",
+            body: `
+              <path d="M78 118 H62 Q48 118 48 104 V78 Q48 68 57 68 Q66 68 66 78 V100 H78Z"/>
+              <path d="M122 100 H138 Q152 100 152 86 V64 Q152 54 143 54 Q134 54 134 64 V82 H122Z"/>
+              <rect x="74" y="40" width="52" height="106" rx="26"/>
+              <circle cx="92" cy="36" r="8"/><circle cx="108" cy="36" r="8"/><circle cx="100" cy="27" r="8"/>
+              <circle cx="100" cy="35" r="5"/>
+              ${face(100, 88, 0.85)}
+              <path d="M84 120 l-5 -3 M116 124 l5 -3 M90 62 l-3 -4 M112 64 l3 -4 M100 130 v-5" fill="none" stroke-width="2.5"/>
+              <path d="M62 150 L138 150 L128 192 L72 192Z"/>
+              <rect x="54" y="138" width="92" height="16" rx="5"/>
+              ${heart(100, 172, 9)}`,
+          },
+          {
+            name: "Donut",
+            body: (() => {
+              let d = "";
+              for (let i = 0; i <= 96; i++) {
+                const t = (i / 96) * Math.PI * 2;
+                const r = 60 + 5 * Math.sin(t * 9);
+                d += (i ? " L" : "M") + `${n(100 + r * Math.cos(t))} ${n(100 + r * Math.sin(t))}`;
+              }
+              const sprinkles = [-160, -132, -105, -78, -50, -22, 8, 172]
+                .map((a, i) => {
+                  const t = (a * Math.PI) / 180;
+                  const x = n(100 + 42 * Math.cos(t));
+                  const y = n(100 + 42 * Math.sin(t));
+                  return `<rect x="${x - 5}" y="${y - 2}" width="10" height="4" rx="2" stroke-width="2" transform="rotate(${i * 47} ${x} ${y})"/>`;
+                })
+                .join("");
+              return `
+                <circle cx="100" cy="100" r="76"/>
+                <path d="${d}Z"/>
+                ${sprinkles}
+                <circle cx="100" cy="100" r="22"/>
+                ${face(100, 140, 0.8)}`;
+            })(),
+          },
+          {
+            name: "Teddy Bear",
+            body: `
+              <circle cx="58" cy="46" r="20"/><circle cx="142" cy="46" r="20"/>
+              <circle cx="60" cy="48" r="10" stroke-width="3"/><circle cx="140" cy="48" r="10" stroke-width="3"/>
+              <ellipse cx="54" cy="150" rx="14" ry="24" transform="rotate(30 54 150)"/>
+              <ellipse cx="146" cy="150" rx="14" ry="24" transform="rotate(-30 146 150)"/>
+              <ellipse cx="100" cy="158" rx="46" ry="38"/>
+              <ellipse cx="100" cy="164" rx="26" ry="22" stroke-width="3"/>
+              ${heart(100, 164, 9)}
+              <ellipse cx="72" cy="186" rx="16" ry="11"/><ellipse cx="128" cy="186" rx="16" ry="11"/>
+              <circle cx="100" cy="84" r="48"/>
+              <ellipse cx="100" cy="104" rx="22" ry="16"/>
+              <ellipse cx="100" cy="98" rx="7" ry="5" fill="#000"/>
+              <path d="M100 103 V108 M100 108 Q94 114 88 109 M100 108 Q106 114 112 109" fill="none" stroke-width="3"/>
+              ${eyes(80, 120, 80, 6)}
+              ${cheeks(68, 132, 100, 7, 4)}`,
+          },
+          {
+            name: "Apple Tree",
+            body: `
+              <path d="M0 176 Q100 150 200 176 V200 H0Z"/>
+              <path d="M86 170 L90 110 L110 110 L114 170Z"/>
+              <path d="M40 112 Q18 104 26 80 Q16 54 44 46 Q50 18 82 22 Q100 4 122 20 Q154 16 158 46 Q186 54 176 82 Q186 108 160 114 Q140 128 100 120 Q60 128 40 112Z"/>
+              ${[[64, 62], [118, 42], [150, 80], [96, 90], [58, 96], [128, 102], [88, 50]]
+                .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8"/>`)
+                .join("")}
+              <circle cx="104" cy="148" r="6" fill="#000"/>
+              ${tinyFlower(30, 184)}${tinyFlower(166, 186)}
+              <circle cx="182" cy="22" r="12"/>`,
+          },
+          {
+            name: "Octopus",
+            body: `
+              ${[[58, 142, 25], [82, 154, 8], [118, 154, -8], [142, 142, -25]]
+                .map(([x, y, a]) => `<ellipse cx="${x}" cy="${y}" rx="13" ry="38" transform="rotate(${a} ${x} ${y})"/>`)
+                .join("")}
+              ${[[47.4, 164.7], [78.5, 178.8], [121.5, 178.8], [152.6, 164.7]]
+                .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.5" stroke-width="2.5"/>`)
+                .join("")}
+              <path d="M44 120 Q38 28 100 26 Q162 28 156 120 Q100 136 44 120Z"/>
+              <circle cx="70" cy="56" r="7"/><circle cx="130" cy="50" r="6"/><circle cx="140" cy="80" r="5"/>
+              ${face(100, 90, 1.1)}
+              <circle cx="24" cy="40" r="6"/><circle cx="36" cy="22" r="4"/><circle cx="176" cy="40" r="5"/>`,
+          },
+          {
+            name: "Dino",
+            body: `
+              <path d="M0 186 H200" fill="none"/>
+              ${[[70, 92], [88, 82], [108, 80], [128, 86], [146, 98]]
+                .map(([x, y]) => `<path d="M${x - 9} ${y + 8} L${x} ${y - 10} L${x + 9} ${y + 8}Z"/>`)
+                .join("")}
+              <path d="M150 120 Q180 128 196 104 Q194 140 152 150Z"/>
+              <rect x="70" y="140" width="20" height="44" rx="8"/><rect x="122" y="140" width="20" height="44" rx="8"/>
+              <path d="M44 120 Q46 86 100 88 Q156 90 160 132 Q160 160 110 160 Q60 160 50 140Z"/>
+              <path d="M58 116 Q50 80 46 66 Q44 48 28 46 Q8 46 8 64 Q8 82 30 82 Q36 82 38 90 Q42 108 44 120Z"/>
+              ${dot(30, 60, 5)}
+              <path d="M14 70 Q20 76 28 74" fill="none" stroke-width="3"/>
+              ${cheek(38, 70, 5, 3)}
+              <circle cx="96" cy="108" r="7"/><circle cx="132" cy="126" r="6"/><circle cx="74" cy="132" r="5"/><circle cx="112" cy="142" r="5"/>`,
+          },
+          {
+            name: "Piggy",
+            body: `
+              <path d="M144 156 Q160 154 158 142 Q156 134 150 138 Q146 144 154 148" fill="none" stroke-width="3.5"/>
+              <path d="M58 62 L52 26 L86 46Z"/><path d="M142 62 L148 26 L114 46Z"/>
+              <ellipse cx="100" cy="160" rx="46" ry="32"/>
+              <ellipse cx="76" cy="190" rx="14" ry="8"/><ellipse cx="124" cy="190" rx="14" ry="8"/>
+              <circle cx="100" cy="92" r="46"/>
+              <ellipse cx="100" cy="108" rx="22" ry="15"/>
+              <ellipse cx="92" cy="108" rx="3.5" ry="5" fill="#000"/><ellipse cx="108" cy="108" rx="3.5" ry="5" fill="#000"/>
+              ${eyes(80, 120, 82, 6)}
+              ${smile(100, 127, 6, 3, 3)}
+              ${cheeks(66, 134, 104, 7, 4)}`,
+          },
+          {
+            name: "Lion",
+            body: `
+              ${wavyCircle(100, 96, 72, 6, 11)}
+              <circle cx="62" cy="54" r="13"/><circle cx="138" cy="54" r="13"/>
+              <circle cx="62" cy="54" r="6" stroke-width="3"/><circle cx="138" cy="54" r="6" stroke-width="3"/>
+              <circle cx="100" cy="98" r="46"/>
+              ${eyes(82, 118, 88, 6)}
+              <circle cx="90" cy="118" r="13"/><circle cx="110" cy="118" r="13"/>
+              <path d="M91 104 H109 L100 114Z"/>
+              <circle cx="86" cy="118" r="1.6" fill="#000"/><circle cx="92" cy="124" r="1.6" fill="#000"/>
+              <circle cx="114" cy="118" r="1.6" fill="#000"/><circle cx="108" cy="124" r="1.6" fill="#000"/>
+              ${cheeks(66, 134, 108, 7, 4)}
+              ${star(24, 180, 10, 4)}${star(176, 180, 10, 4)}`,
+          },
+          {
+            name: "Birthday Cake",
+            body: `
+              <path d="M77 46 Q70 36 77 28 Q84 36 77 46Z"/>
+              <path d="M100 40 Q93 30 100 22 Q107 30 100 40Z"/>
+              <path d="M123 46 Q116 36 123 28 Q130 36 123 46Z"/>
+              <rect x="72" y="46" width="10" height="32" rx="3"/>
+              <rect x="95" y="40" width="10" height="38" rx="3"/>
+              <rect x="118" y="46" width="10" height="32" rx="3"/>
+              <ellipse cx="100" cy="182" rx="84" ry="10"/>
+              <rect x="58" y="76" width="84" height="48" rx="8"/>
+              ${frosting(58, 142, 76, 6)}
+              <circle cx="72" cy="108" r="4"/><circle cx="100" cy="110" r="4"/><circle cx="128" cy="108" r="4"/>
+              <rect x="36" y="120" width="128" height="60" rx="8"/>
+              ${frosting(36, 164, 120, 8)}
+              ${face(100, 156, 1)}
+              ${heart(56, 160, 6)}${heart(144, 160, 6)}`,
+          },
+          {
+            name: "Sailboat",
+            body: `
+              ${rays(32, 32, 17, 27, 10, 12)}<circle cx="32" cy="32" r="15"/>${face(32, 32, 0.5)}
+              ${cloud(164, 72, 0.6)}
+              <path d="M150 34 Q158 26 166 34 Q174 26 182 34" fill="none" stroke-width="3"/>
+              <path d="M100 32 L100 14 L124 23Z"/>
+              <path d="M94 38 L94 126 L42 126Z"/>
+              <path d="M106 52 L106 126 L148 126Z"/>
+              <rect x="97" y="28" width="6" height="104" rx="3"/>
+              <path d="M28 130 H172 L152 168 H48Z"/>
+              <circle cx="72" cy="146" r="6"/><circle cx="100" cy="146" r="6"/><circle cx="128" cy="146" r="6"/>
+              <path d="M0 162 Q25 152 50 162 T100 162 T150 162 T200 162 V200 H0Z"/>
+              <path d="M30 184 Q40 178 50 184 M140 182 Q150 176 160 182" fill="none" stroke-width="3"/>`,
+          },
+          {
+            name: "Ducky",
+            body: `
+              <path d="M160 126 L190 104 L178 142Z"/>
+              <ellipse cx="108" cy="138" rx="62" ry="34"/>
+              <path d="M92 132 Q120 116 148 132 Q132 156 102 150 Q90 146 92 132Z"/>
+              <path d="M44 86 Q14 82 10 94 Q20 106 46 100Z"/>
+              <path d="M12 95 Q28 96 44 93" fill="none" stroke-width="3"/>
+              <circle cx="66" cy="82" r="32"/>
+              <path d="M62 50 Q60 36 70 34 Q66 42 74 50" fill="none" stroke-width="3.5"/>
+              ${dot(70, 76, 5)}
+              ${cheek(82, 92, 6, 3.5)}
+              <path d="M0 160 Q25 150 50 160 T100 160 T150 160 T200 160 V200 H0Z"/>
+              <path d="M20 182 Q30 176 40 182 M150 184 Q160 178 170 184" fill="none" stroke-width="3"/>
+              ${tinyFlower(172, 30)}`,
+          },
+        ];
+
+        /* =========================================================
+         * Palette — 24 colors around the rainbow, plus neutrals.
+         * ========================================================= */
+        const COLORS = [
+          ["#e53935", "Red"],
+          ["#ff5722", "Red orange"],
+          ["#ff9800", "Orange"],
+          ["#ffc107", "Gold"],
+          ["#ffeb3b", "Yellow"],
+          ["#d4e157", "Lime"],
+          ["#8bc34a", "Light green"],
+          ["#43a047", "Green"],
+          ["#a5d6a7", "Mint"],
+          ["#00897b", "Teal"],
+          ["#26c6da", "Aqua"],
+          ["#81d4fa", "Sky blue"],
+          ["#1e88e5", "Blue"],
+          ["#3949ab", "Indigo"],
+          ["#7e57c2", "Violet"],
+          ["#ce93d8", "Lavender"],
+          ["#ab47bc", "Purple"],
+          ["#ec407a", "Pink"],
+          ["#f8bbd0", "Light pink"],
+          ["#ffccbc", "Peach"],
+          ["#8d6e63", "Brown"],
+          ["#ffffff", "White"],
+          ["#9e9e9e", "Gray"],
+          ["#37474f", "Charcoal"],
+        ];
+
+        /* =========================================================
+         * State
+         * ========================================================= */
+        const SIZE = 900;
+        const board = document.getElementById("board");
+        const ctx = board.getContext("2d");
+        const lineCanvas = document.createElement("canvas");
+        const colorCanvas = document.createElement("canvas");
+        lineCanvas.width = lineCanvas.height = colorCanvas.width = colorCanvas.height = SIZE;
+        const lineCtx = lineCanvas.getContext("2d", { willReadFrequently: true });
+        const colorCtx = colorCanvas.getContext("2d");
+        const colorImg = colorCtx.createImageData(SIZE, SIZE);
+
+        let picIndex = -1;
+        let labels = null; // Int32Array: region id per pixel (0 = outline)
+        let regionSizes = [];
+        let fills = {}; // region id -> hex color
+        let history = [];
+        let celebrated = false;
+        let currentColor = COLORS[17][0];
+        let currentColorIndex = 17;
+        let loadToken = 0;
+        let anim = null;
+        let muted = false;
+        const savedArt = {}; // picture index -> { fills, history, celebrated }
+
+        try {
+          muted = localStorage.getItem("colorMeMuted") === "1";
+        } catch (e) {}
+
+        /* =========================================================
+         * SVG rendering
+         * ========================================================= */
+        const svgMarkup = (pic, size) =>
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}">` +
+          `<rect width="200" height="200" fill="#fff"/>` +
+          `<g fill="#fff" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">${pic.body}</g></svg>`;
+
+        function loadPicture(index) {
+          stashArt();
+          finishAnim();
+          picIndex = index;
+          const pic = PICTURES[index];
+          document.getElementById("picName").textContent = pic.name;
+          document.getElementById("loading").style.display = "";
+          const token = ++loadToken;
+          const img = new Image();
+          img.onload = () => {
+            if (token !== loadToken) return;
+            lineCtx.fillStyle = "#fff";
+            lineCtx.fillRect(0, 0, SIZE, SIZE);
+            lineCtx.drawImage(img, 0, 0, SIZE, SIZE);
+            let data;
+            try {
+              data = lineCtx.getImageData(0, 0, SIZE, SIZE);
+            } catch (e) {
+              document.getElementById("loading").textContent = "Oops! This browser can't load the picture.";
+              return;
+            }
+            computeRegions(data.data);
+            const saved = savedArt[index];
+            fills = saved ? { ...saved.fills } : {};
+            history = saved ? saved.history.slice() : [];
+            celebrated = saved ? saved.celebrated : false;
+            repaintAll();
+            updateButtons();
+            document.getElementById("loading").style.display = "none";
+          };
+          img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup(pic, SIZE));
+        }
+
+        function stashArt() {
+          if (picIndex < 0 || !labels) return;
+          savedArt[picIndex] = { fills: { ...fills }, history: history.slice(), celebrated };
+        }
+
+        /* Label every enclosed white area so a click can fill it later. */
+        function computeRegions(px) {
+          const N = SIZE * SIZE;
+          const light = new Uint8Array(N);
+          for (let i = 0; i < N; i++) light[i] = px[i * 4] > 170 ? 1 : 0;
+
+          const lab = new Int32Array(N);
+          const stack = new Int32Array(N);
+          const sizes = [0];
+          let next = 1;
+          for (let s = 0; s < N; s++) {
+            if (!light[s] || lab[s]) continue;
+            let sp = 0;
+            let count = 0;
+            stack[sp++] = s;
+            lab[s] = next;
+            while (sp) {
+              const p = stack[--sp];
+              count++;
+              const x = p % SIZE;
+              if (x > 0 && light[p - 1] && !lab[p - 1]) { lab[p - 1] = next; stack[sp++] = p - 1; }
+              if (x < SIZE - 1 && light[p + 1] && !lab[p + 1]) { lab[p + 1] = next; stack[sp++] = p + 1; }
+              if (p >= SIZE && light[p - SIZE] && !lab[p - SIZE]) { lab[p - SIZE] = next; stack[sp++] = p - SIZE; }
+              if (p < N - SIZE && light[p + SIZE] && !lab[p + SIZE]) { lab[p + SIZE] = next; stack[sp++] = p + SIZE; }
+            }
+            sizes.push(count);
+            next++;
+          }
+
+          // Grow each region a few pixels under the outlines so the
+          // anti-aliased edges get colored too (no white halos).
+          for (let pass = 0; pass < 3; pass++) {
+            const src = lab.slice();
+            for (let p = 0; p < N; p++) {
+              if (src[p]) continue;
+              const x = p % SIZE;
+              let v = 0;
+              if (x > 0 && src[p - 1]) v = src[p - 1];
+              else if (x < SIZE - 1 && src[p + 1]) v = src[p + 1];
+              else if (p >= SIZE && src[p - SIZE]) v = src[p - SIZE];
+              else if (p < N - SIZE && src[p + SIZE]) v = src[p + SIZE];
+              if (v) lab[p] = v;
+            }
+          }
+          labels = lab;
+          regionSizes = sizes;
+        }
+
+        /* =========================================================
+         * Painting
+         * ========================================================= */
+        const hexToRgb = (hex) => {
+          const v = parseInt(hex.slice(1), 16);
+          return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+        };
+
+        function composite() {
+          colorCtx.putImageData(colorImg, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.drawImage(colorCanvas, 0, 0);
+          ctx.globalCompositeOperation = "multiply";
+          ctx.drawImage(lineCanvas, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+        }
+
+        function repaintAll() {
+          const d = colorImg.data;
+          const rgb = {};
+          for (const k in fills) rgb[k] = hexToRgb(fills[k]);
+          for (let p = 0, i = 0; p < labels.length; p++, i += 4) {
+            const c = rgb[labels[p]];
+            if (c) {
+              d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+            } else {
+              d[i] = d[i + 1] = d[i + 2] = 255;
+            }
+            d[i + 3] = 255;
+          }
+          composite();
+        }
+
+        function finishAnim() {
+          if (!anim) return;
+          anim.step(Infinity);
+          anim = null;
+          composite();
+        }
+
+        /* Fill one region with a "ripple" that spreads from the click point. */
+        function fillRegion(region, color, ox, oy) {
+          finishAnim();
+          const prev = fills[region] || null;
+          if (prev === color) return false;
+          history.push({ region, prev });
+          if (color) fills[region] = color;
+          else delete fills[region];
+
+          const [r, g, b] = color ? hexToRgb(color) : [255, 255, 255];
+          const pixels = [];
+          for (let p = 0; p < labels.length; p++) if (labels[p] === region) pixels.push(p);
+
+          // Bucket the pixels by distance from the click (counting sort).
+          let maxD = 0;
+          const dist = new Uint16Array(pixels.length);
+          for (let j = 0; j < pixels.length; j++) {
+            const p = pixels[j];
+            const dx = (p % SIZE) - ox;
+            const dy = ((p / SIZE) | 0) - oy;
+            const dd = Math.sqrt(dx * dx + dy * dy) | 0;
+            dist[j] = dd;
+            if (dd > maxD) maxD = dd;
+          }
+          const counts = new Uint32Array(maxD + 2);
+          for (let j = 0; j < dist.length; j++) counts[dist[j] + 1]++;
+          for (let k = 1; k < counts.length; k++) counts[k] += counts[k - 1];
+          const order = new Int32Array(pixels.length);
+          const cursor = counts.slice();
+          for (let j = 0; j < dist.length; j++) order[cursor[dist[j]]++] = pixels[j];
+
+          const d = colorImg.data;
+          let done = 0;
+          const step = (radius) => {
+            const end = radius >= maxD ? order.length : counts[Math.min(maxD + 1, (radius | 0) + 1)];
+            for (; done < end; done++) {
+              const i = order[done] * 4;
+              d[i] = r; d[i + 1] = g; d[i + 2] = b;
+            }
+          };
+
+          const duration = Math.min(420, 140 + maxD * 0.5);
+          const start = performance.now();
+          const current = { step };
+          anim = current;
+          const tick = (now) => {
+            if (anim !== current) return;
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 2);
+            step(t >= 1 ? Infinity : eased * maxD);
+            composite();
+            if (t < 1) requestAnimationFrame(tick);
+            else anim = null;
+          };
+          requestAnimationFrame(tick);
+          return true;
+        }
+
+        function regionAt(x, y) {
+          const at = (px, py) =>
+            px >= 0 && py >= 0 && px < SIZE && py < SIZE ? labels[py * SIZE + px] : 0;
+          const direct = at(x, y);
+          if (direct) return direct;
+          // Tapped on an outline: find the closest colorable spot nearby.
+          for (let rad = 1; rad <= 14; rad++) {
+            for (let a = 0; a < 16; a++) {
+              const t = (a / 16) * Math.PI * 2;
+              const v = at(Math.round(x + rad * Math.cos(t)), Math.round(y + rad * Math.sin(t)));
+              if (v) return v;
+            }
+          }
+          return 0;
+        }
+
+        board.addEventListener("pointerdown", (e) => {
+          if (!labels || e.button > 0) return;
+          const rect = board.getBoundingClientRect();
+          const border = 5;
+          const inner = rect.width - border * 2;
+          const x = Math.floor(((e.clientX - rect.left - border) / inner) * SIZE);
+          const y = Math.floor(((e.clientY - rect.top - border) / inner) * SIZE);
+          const region = regionAt(x, y);
+          if (!region) return;
+          const color = currentColor === "#ffffff" ? null : currentColor;
+          if (fillRegion(region, color, x, y)) {
+            bloop(260 + currentColorIndex * 22);
+            sparkle(e.clientX, e.clientY, currentColor);
+            updateButtons();
+            checkFinished();
+          }
+        });
+
+        function checkFinished() {
+          if (celebrated) return;
+          // Every sizable area except the biggest one (usually the background).
+          let biggest = 1;
+          for (let k = 1; k < regionSizes.length; k++) if (regionSizes[k] > regionSizes[biggest]) biggest = k;
+          const minSize = 450;
+          for (let k = 1; k < regionSizes.length; k++) {
+            if (k === biggest || regionSizes[k] < minSize) continue;
+            if (!fills[k]) return;
+          }
+          celebrated = true;
+          setTimeout(celebrate, 350);
+        }
+
+        /* =========================================================
+         * UI
+         * ========================================================= */
+        const bucketSvg = (hex, size) =>
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 40 40">` +
+          `<g transform="rotate(-30 24 22)" stroke="#222" stroke-width="2.2" stroke-linejoin="round">` +
+          `<path d="M14 14 Q24 -3 34 14" fill="none"/>` +
+          `<path d="M12 14 H36 L33 34 Q24 37 15 34Z" fill="${hex}"/>` +
+          `<path d="M16 22 H32" stroke="#fff" stroke-opacity="0.7" stroke-width="2" fill="none"/>` +
+          `<ellipse cx="24" cy="14" rx="12" ry="4" fill="#fff"/></g>` +
+          `<path d="M8 19 C3 25 2 32 4 36 C6 39 10 37 9.5 32 C9 27 11 23 13 20Z" fill="${hex}" stroke="#222" stroke-width="2"/>` +
+          `</svg>`;
+
+        function setColor(i) {
+          currentColorIndex = i;
+          currentColor = COLORS[i][0];
+          document.querySelectorAll(".swatch").forEach((el, k) => {
+            el.classList.toggle("selected", k === i);
+            el.setAttribute("aria-checked", k === i ? "true" : "false");
+          });
+          const svg = bucketSvg(currentColor, 40);
+          board.style.cursor = `url("data:image/svg+xml,${encodeURIComponent(svg)}") 4 37, crosshair`;
+          document.getElementById("current").innerHTML = svg;
+        }
+
+        const palette = document.getElementById("palette");
+        COLORS.forEach(([hex, name], i) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "swatch";
+          b.style.setProperty("--c", hex);
+          b.title = name;
+          b.setAttribute("role", "radio");
+          b.setAttribute("aria-label", name);
+          b.addEventListener("click", () => {
+            setColor(i);
+            tick(520 + i * 18);
+          });
+          palette.appendChild(b);
+        });
+
+        function updateButtons() {
+          document.getElementById("undoBtn").disabled = history.length === 0;
+        }
+
+        // Shuffle bag so pictures don't repeat until all have been shown.
+        let bag = [];
+        function nextRandomPicture() {
+          if (!bag.length) {
+            bag = PICTURES.map((_, i) => i).filter((i) => i !== picIndex);
+            for (let i = bag.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [bag[i], bag[j]] = [bag[j], bag[i]];
+            }
+          }
+          return bag.pop();
+        }
+
+        document.getElementById("newBtn").addEventListener("click", () => {
+          loadPicture(nextRandomPicture());
+          tick(700);
+        });
+
+        document.getElementById("undoBtn").addEventListener("click", () => {
+          finishAnim();
+          const last = history.pop();
+          if (!last) return;
+          if (last.type === "clear") fills = last.prev;
+          else if (last.prev) fills[last.region] = last.prev;
+          else delete fills[last.region];
+          repaintAll();
+          updateButtons();
+          tick(380);
+        });
+
+        document.getElementById("clearBtn").addEventListener("click", () => {
+          finishAnim();
+          if (!Object.keys(fills).length) return;
+          history.push({ type: "clear", prev: { ...fills } });
+          fills = {};
+          celebrated = false;
+          repaintAll();
+          updateButtons();
+          tick(300);
+        });
+
+        document.getElementById("saveBtn").addEventListener("click", () => {
+          finishAnim();
+          const name = (PICTURES[picIndex]?.name || "picture").toLowerCase().replace(/\s+/g, "-");
+          const a = document.createElement("a");
+          a.download = `color-me-${name}.png`;
+          a.href = board.toDataURL("image/png");
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        });
+
+        const soundBtn = document.getElementById("soundBtn");
+        const renderSound = () => (soundBtn.textContent = muted ? "🔇" : "🔊");
+        soundBtn.addEventListener("click", () => {
+          muted = !muted;
+          try {
+            localStorage.setItem("colorMeMuted", muted ? "1" : "0");
+          } catch (e) {}
+          renderSound();
+          tick(600);
+        });
+        renderSound();
+
+        /* Gallery */
+        const gallery = document.getElementById("gallery");
+        const grid = document.getElementById("galleryGrid");
+        PICTURES.forEach((pic, i) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "thumb";
+          b.innerHTML = svgMarkup(pic, 100).replace(/ width="100" height="100"/, "") + `<div>${pic.name}</div>`;
+          b.addEventListener("click", () => {
+            closeGallery();
+            if (i !== picIndex) loadPicture(i);
+          });
+          grid.appendChild(b);
+        });
+        const openGallery = () => {
+          [...grid.children].forEach((el, i) => el.classList.toggle("current-pic", i === picIndex));
+          gallery.classList.add("open");
+          gallery.setAttribute("aria-hidden", "false");
+        };
+        const closeGallery = () => {
+          gallery.classList.remove("open");
+          gallery.setAttribute("aria-hidden", "true");
+        };
+        document.getElementById("pickBtn").addEventListener("click", openGallery);
+        document.getElementById("closeGallery").addEventListener("click", closeGallery);
+        gallery.addEventListener("click", (e) => {
+          if (e.target === gallery) closeGallery();
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") closeGallery();
+        });
+
+        /* Fit the square board into whatever space is left. */
+        const wrap = document.getElementById("wrap");
+        function fitBoard() {
+          const cs = getComputedStyle(wrap);
+          const w = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          const h = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+          const s = Math.max(160, Math.floor(Math.min(w, h)));
+          board.style.width = board.style.height = s + "px";
+        }
+        window.addEventListener("resize", fitBoard);
+
+        /* =========================================================
+         * Fun: sounds, sparkles, confetti
+         * ========================================================= */
+        let actx = null;
+        function tone(freq, endFreq, dur, vol, type = "sine") {
+          if (muted) return;
+          try {
+            actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+            if (actx.state === "suspended") actx.resume();
+            const t = actx.currentTime;
+            const o = actx.createOscillator();
+            const g = actx.createGain();
+            o.type = type;
+            o.frequency.setValueAtTime(freq, t);
+            o.frequency.exponentialRampToValueAtTime(endFreq, t + dur * 0.6);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            o.connect(g).connect(actx.destination);
+            o.start(t);
+            o.stop(t + dur + 0.02);
+          } catch (e) {}
+        }
+        const bloop = (f) => tone(f, f * 1.9, 0.25, 0.22);
+        const tick = (f) => tone(f, f * 1.2, 0.08, 0.08, "triangle");
+
+        function sparkle(x, y, color) {
+          for (let i = 0; i < 9; i++) {
+            const s = document.createElement("span");
+            s.className = "spark";
+            const a = (i / 9) * Math.PI * 2 + Math.random() * 0.5;
+            const dist = 30 + Math.random() * 25;
+            s.style.left = x + "px";
+            s.style.top = y + "px";
+            s.style.background = color === "#ffffff" ? "#ffe066" : color;
+            s.style.setProperty("--dx", Math.cos(a) * dist + "px");
+            s.style.setProperty("--dy", Math.sin(a) * dist + "px");
+            document.body.appendChild(s);
+            setTimeout(() => s.remove(), 650);
+          }
+        }
+
+        function celebrate() {
+          const toast = document.getElementById("toast");
+          const words = ["Beautiful! 🌟", "Amazing! 🎉", "So pretty! 🌈", "Great job! ⭐", "Wow! 💖"];
+          toast.textContent = words[Math.floor(Math.random() * words.length)];
+          toast.classList.remove("show");
+          void toast.offsetWidth;
+          toast.classList.add("show");
+          [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, f, 0.22, 0.15, "triangle"), i * 110));
+          for (let i = 0; i < 70; i++) {
+            const c = document.createElement("span");
+            c.className = "confetti";
+            c.style.left = Math.random() * 100 + "vw";
+            c.style.background = COLORS[Math.floor(Math.random() * 21)][0];
+            c.style.setProperty("--drift", (Math.random() - 0.5) * 200 + "px");
+            c.style.setProperty("--spin", Math.random() * 900 + "deg");
+            c.style.setProperty("--t", 2 + Math.random() * 1.5 + "s");
+            c.style.animationDelay = Math.random() * 0.6 + "s";
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 4200);
+          }
+        }
+
+        /* =========================================================
+         * Start
+         * ========================================================= */
+        setColor(currentColorIndex);
+        fitBoard();
+        loadPicture(nextRandomPicture());
+      })();
+    </script>
+  </body>
+</html>
