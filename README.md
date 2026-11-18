@@ -12,5 +12,6 @@ Currently have the following games:
 7. Chomp Chomp
 8. Picture Difference Game
 9. Color Me
+10. Bunny Hop
 
 No login, no ads, easy to start. Enjoy!
